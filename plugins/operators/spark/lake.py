@@ -14,7 +14,7 @@ class CommonLakeSparkOperator(BaseSparkOperator):
         self,
         *,
         application,
-        application_args,
+        application_args=None,
         aws_conn_id="aws_default",
         catalog_conn_id="catalog_default",
         **kwargs,

@@ -2,6 +2,7 @@ from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import DAG
 from hook.gh_archive import GHArchiveHook
 from operators.common.code_deploy import CodeDeployOperator
+from operators.spark.ExtractMetaOperator import ExtractMetaOperator
 from operators.spark.lake import CommonLakeSparkOperator
 from pendulum import datetime
 
@@ -43,7 +44,6 @@ with DAG(
         task_id="extract_gharchive_event_to_bronze",
         py_files="{{ ti.xcom_pull(task_ids='deploy_spark_code') }}",
         application="/opt/airflow/include/spark/jobs/extract_gharchive_events_to_bronze_job.py",
-        conn_id="spark_default",
         application_args=[
             "--source_path",
             "{{ ti.xcom_pull(task_ids='save_gharchive_to_s3') }}",
@@ -53,8 +53,26 @@ with DAG(
         executor_memory="1g",
         aws_conn_id="aws_default",
         catalog_conn_id="catalog_default",
-        conf={},
         verbose=True,
     )
 
-    deploy_spark_code >> save_gharchive_to_s3 >> extract_gharchive_event_to_bronze
+    extract_actor_meta_from_bronze_events = ExtractMetaOperator(
+        task_id="extract_actor_meta_from_bronze_events",
+        py_files="{{ ti.xcom_pull(task_ids='deploy_spark_code') }}",
+        application="/opt/airflow/include/spark/jobs/extract_actor_meta_from_bronze_events_job.py",
+        verbose=True,
+    )
+
+    extract_repo_meta_from_bronze_events = ExtractMetaOperator(
+        task_id="extract_repo_meta_from_bronze_events",
+        py_files="{{ ti.xcom_pull(task_ids='deploy_spark_code') }}",
+        application="/opt/airflow/include/spark/jobs/extract_repo_meta_from_bronze_events_job.py",
+        verbose=True,
+    )
+
+    (
+        deploy_spark_code
+        >> save_gharchive_to_s3
+        >> extract_gharchive_event_to_bronze
+        >> [extract_actor_meta_from_bronze_events, extract_repo_meta_from_bronze_events]
+    )
