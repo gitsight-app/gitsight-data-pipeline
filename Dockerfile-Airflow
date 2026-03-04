@@ -1,0 +1,25 @@
+FROM apache/airflow:3.1.2-python3.11
+
+USER root
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y --no-install-recommends openjdk-17-jre-headless procps && \
+    ARCH=$(dpkg --print-architecture) && \
+    ln -s /usr/lib/jvm/java-17-openjdk-${ARCH} /usr/lib/jvm/java-17-home
+
+ENV JAVA_HOME=/usr/lib/jvm/java-17-home
+
+RUN mkdir -p /opt/airflow/jars && \
+    curl -L https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar -o /opt/airflow/jars/hadoop-aws-3.3.4.jar && \
+    curl -L https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar -o /opt/airflow/jars/aws-java-sdk-bundle-1.12.262.jar && \
+    chown -R airflow:0 /opt/airflow/jars
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install -r pyproject.toml
+
+USER airflow

@@ -1,0 +1,19 @@
+[project]
+name = "gitsight"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "apache-airflow-providers-amazon>=9.21.0",
+    "apache-airflow-providers-apache-spark>=5.2.1",
+    "dotenv>=0.9.9",
+    "pyarrow>=22.0.0",
+    "pyspark==3.5.1",
+]
+
+[dependency-groups]
+dev = [
+    "notebook>=7.5.4",
+    "ruff>=0.15.4",
+]
