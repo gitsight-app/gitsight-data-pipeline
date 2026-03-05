@@ -15,9 +15,10 @@ def _save_gharchive_to_s3(*, aws_conn_id: str, bucket_name: str, **context):
 
 
 with DAG(
-    dag_id="fetch_gharchive_dag",
+    dag_id="gharchive_events_ingest",
     doc_md="""
-    Fetch Gharchive data from https://www.gharchive.org/
+    - Ingest Gharchive data from https://www.gharchive.org/
+    - extract actor and repo meta from gharchive events in bronze layer
     """,
     start_date=datetime(2026, 1, 1),
     schedule="30 * * * *",
