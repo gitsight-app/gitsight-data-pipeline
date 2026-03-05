@@ -1,6 +1,9 @@
 from airflow.sdk import DAG
 from operators.common.code_deploy import CodeDeployOperator
-from operators.spark.lake import CommonLakeSparkOperator
+from operators.spark.TransformSilverEventOperator import (
+    EventType,
+    TransformSilverEventOperator,
+)
 from pendulum import datetime
 
 with DAG(
@@ -22,20 +25,28 @@ with DAG(
         aws_conn_id="aws_default",
     )
 
-    transform_silver_watch_events_from_bronze = CommonLakeSparkOperator(
+    transform_silver_watch_events_from_bronze = TransformSilverEventOperator(
         task_id="transform_silver_watch_events_from_bronze",
         py_files="{{ ti.xcom_pull(task_ids='deploy_spark_code') }}",
-        application="/opt/airflow/include/spark/jobs/transform_silver_watch_events_from_bronze_job.py",
-        application_args=[
-            "--data_interval_start",
-            "{{ data_interval_start }}",
-            "--data_interval_end",
-            "{{ data_interval_end }}",
-        ],
         executor_memory="1g",
         aws_conn_id="aws_default",
+        event_type=EventType.WATCH,
+        target_table="nessie.gitsight.silver.watch_events",
         catalog_conn_id="catalog_default",
         verbose=True,
     )
 
-    deploy_spark_code >> transform_silver_watch_events_from_bronze
+    transform_silver_fork_events_from_bronze = TransformSilverEventOperator(
+        task_id="transform_silver_fork_events_from_bronze",
+        py_files="{{ ti.xcom_pull(task_ids='deploy_spark_code') }}",
+        executor_memory="1g",
+        aws_conn_id="aws_default",
+        event_type=EventType.FORK,
+        target_table="nessie.gitsight.silver.fork_events",
+        catalog_conn_id="catalog_default",
+        verbose=True,
+    )
+    deploy_spark_code >> [
+        transform_silver_watch_events_from_bronze,
+        transform_silver_fork_events_from_bronze,
+    ]
