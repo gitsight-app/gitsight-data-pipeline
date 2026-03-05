@@ -30,7 +30,7 @@ def transform_silver_watch_events_from_bronze_job(
     :param kwargs:
     :return:
     """  # noqa: E501
-    start_ts = pendulum.parse(data_interval_start) - timedelta(hours=1)
+    start_ts = pendulum.parse(data_interval_start) - timedelta(hours=2)
     end_ts = pendulum.parse(data_interval_end)
 
     logger.info(f"Transform Between Date: {start_ts} - {end_ts}")

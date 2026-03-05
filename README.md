@@ -98,7 +98,7 @@ graph TD
     ACTOR_MASTER[(silver/actor_master)]:::silver_t
     REPO_MASTER[(silver/repo_master)]:::silver_t
 
-    subgraph daily: repo_actor_master_transform_dag
+    subgraph hourly: repo_actor_master_transform_dag
         REPO_META -- dedup & upsert --> REPO_MASTER
         ACTOR_META -- dedup & upsert --> ACTOR_MASTER
 
