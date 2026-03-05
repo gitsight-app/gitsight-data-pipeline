@@ -1376,7 +1376,7 @@ wheels = [
 ]
 
 [[package]]
-name = "gitsight"
+name = "gitsight-data-pipeline"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
