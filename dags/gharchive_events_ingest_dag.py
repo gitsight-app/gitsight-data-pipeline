@@ -21,7 +21,7 @@ with DAG(
     - extract actor and repo meta from gharchive events in bronze layer
     """,
     start_date=datetime(2026, 1, 1),
-    schedule="30 * * * *",
+    schedule="10 * * * *",
     catchup=False,
 ) as dag:
     deploy_spark_code = CodeDeployOperator(

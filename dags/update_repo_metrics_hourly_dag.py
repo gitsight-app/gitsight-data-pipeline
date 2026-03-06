@@ -7,13 +7,14 @@ from operators.spark.lake import CommonLakeSparkOperator
 
 with DAG(
     dag_id="update_repo_metrics_hourly_dag",
-    schedule="@hourly",
+    schedule="20 * * * *",
     start_date=pendulum.datetime(2026, 1, 1),
     catchup=False,
 ) as dag:
     wait_for_silver_events = ExternalTaskSensor(
         task_id="wait_for_silver_events",
         external_dag_id="github_events_transform",
+        external_task_id="end_events_transform",
         mode="reschedule",
         poke_interval=60,
         timeout=60 * 60,

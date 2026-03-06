@@ -10,7 +10,7 @@ with DAG(
     This DAG is scheduled to run daily and will process the data for the previous day.
     """,
     start_date=datetime(2026, 1, 1),
-    schedule="40 * * * *",
+    schedule="15 * * * *",
     catchup=False,
 ) as dag:
     deploy_spark_code = CodeDeployOperator(

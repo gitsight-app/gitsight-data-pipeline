@@ -14,8 +14,8 @@ target_repo_master_table_name: str = "nessie.gitsight.silver.actor_master"
 def load_actor_master_to_silver_job(
     *, spark: SparkSession, data_interval_start, data_interval_end, logger, **kwargs
 ):
-    start_ts = pendulum.parse(data_interval_start).start_of("day")
-    end_ts = pendulum.parse(data_interval_end).start_of("day")
+    start_ts = pendulum.parse(data_interval_start).start_of("hour")
+    end_ts = pendulum.parse(data_interval_end).start_of("hour")
 
     has_actor_id = F.col("actor_id").isNotNull()
 
@@ -40,7 +40,6 @@ def load_actor_master_to_silver_job(
         .coalesce(2)
         .cache()
     )
-
 
     if not spark.catalog.tableExists(target_repo_master_table_name):
         (

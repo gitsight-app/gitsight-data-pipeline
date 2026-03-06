@@ -21,13 +21,15 @@ target_gold_repo_metrics_table_name = "nessie.gitsight.gold.repo_metrics_hourly"
 def update_gold_repo_metrics_hourly_job(
     *, spark: SparkSession, data_interval_start, data_interval_end, logger, **kwargs
 ):
-    start_ts = pendulum.parse(data_interval_start)
-    end_ts = pendulum.parse(data_interval_end)
+    start_ts = pendulum.parse(data_interval_start).start_of("hour")
+    end_ts = pendulum.parse(data_interval_end).start_of("hour")
 
-    date_between = (F.col("ingested_at") >= start_ts) & (F.col("ingested_at") < end_ts)
+    date_between = (F.col("ingested_at") >= F.lit(start_ts)) & (
+        F.col("ingested_at") < F.lit(end_ts)
+    )
 
-    fork_events = spark.read.table(source_fork_events_table_name).filter(date_between)
-    watch_events = spark.read.table(source_watch_events_table_name).filter(date_between)
+    fork_events = spark.read.table(source_fork_events_table_name).where(date_between)
+    watch_events = spark.read.table(source_watch_events_table_name).where(date_between)
 
     logger.info(
         f"Fork, Watch Events Count: ({fork_events.count()}, {watch_events.count()})"
@@ -52,7 +54,9 @@ def update_gold_repo_metrics_hourly_job(
         F.sum("fork_count").alias("fork_count"),
     )
 
-    calc_count_df = calc_count_df.withColumn("ingested_at", F.lit(start_ts))
+    calc_count_df = calc_count_df.withColumn(
+        "ingested_at", F.lit(pendulum.parse(data_interval_start))
+    )
 
     repo_metrics_df = calc_count_df.select(
         "*",
@@ -131,13 +135,13 @@ def update_gold_repo_metrics_table(
         (F.col("ingested_at") >= prev_start_ts) & (F.col("ingested_at") < prev_end_ts)
     )
 
-    calc_star_trend = F.coalesce(
-        F.col("prev_star_rank"), F.col("curr_metrics.star_rank")
-    ) - F.col("curr_metrics.star_rank")
+    calc_star_trend = F.when(F.col("prev_metrics.star_rank").isNull(), 0).otherwise(
+        F.col("prev_metrics.star_rank") - F.col("curr_metrics.star_rank")
+    )
 
-    calc_fork_trend = F.coalesce(
-        F.col("prev_fork_rank"), F.col("curr_metrics.fork_rank")
-    ) - F.col("curr_metrics.fork_rank")
+    calc_fork_trend = F.when(F.col("prev_metrics.fork_rank").isNull(), 0).otherwise(
+        F.col("prev_metrics.fork_rank") - F.col("curr_metrics.fork_rank")
+    )
 
     result_df = (
         df.alias("curr_metrics")
@@ -157,6 +161,7 @@ def update_gold_repo_metrics_table(
             F.col("prev_metrics.fork_count").alias("prev_fork_count"),
             F.col("prev_metrics.star_rank").alias("prev_star_rank"),
             F.col("prev_metrics.fork_rank").alias("prev_fork_rank"),
+            F.col("prev_metrics.star_rank").isNull().alias("is_new"),
             calc_star_trend.alias("star_trend"),
             calc_fork_trend.alias("fork_trend"),
             F.col("curr_metrics.ingested_at").alias("ingested_at"),

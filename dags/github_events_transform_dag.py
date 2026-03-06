@@ -1,3 +1,4 @@
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import DAG
 from operators.common.code_deploy import CodeDeployOperator
 from operators.spark.TransformSilverEventOperator import (
@@ -14,7 +15,7 @@ with DAG(
 
     """,
     start_date=datetime(2026, 1, 1),
-    schedule="@hourly",
+    schedule="20 * * * *",
     catchup=False,
 ) as dag:
     deploy_spark_code = CodeDeployOperator(
@@ -46,7 +47,15 @@ with DAG(
         catalog_conn_id="catalog_default",
         verbose=True,
     )
-    deploy_spark_code >> [
-        transform_silver_watch_events_from_bronze,
-        transform_silver_fork_events_from_bronze,
-    ]
+
+    end_events_transform = EmptyOperator(
+        task_id="end_events_transform",
+    )
+    (
+        deploy_spark_code
+        >> [
+            transform_silver_watch_events_from_bronze,
+            transform_silver_fork_events_from_bronze,
+        ]
+        >> end_events_transform
+    )
