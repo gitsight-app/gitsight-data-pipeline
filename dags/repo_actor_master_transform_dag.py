@@ -1,6 +1,6 @@
 from airflow.sdk import DAG
 from operators.common.code_deploy import CodeDeployOperator
-from operators.spark.lake import CommonLakeSparkOperator
+from operators.spark.base.lake import CommonLakeSparkOperator
 from pendulum import datetime
 
 with DAG(

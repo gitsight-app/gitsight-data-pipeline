@@ -1,7 +1,7 @@
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import DAG
 from operators.common.code_deploy import CodeDeployOperator
-from operators.spark.TransformSilverEventOperator import (
+from operators.spark.transform_silver_event_operator import (
     EventType,
     TransformSilverEventOperator,
 )
