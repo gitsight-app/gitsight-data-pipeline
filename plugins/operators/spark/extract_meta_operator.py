@@ -1,4 +1,4 @@
-from operators.spark.lake import CommonLakeSparkOperator
+from operators.spark.base.lake import CommonLakeSparkOperator
 
 
 class ExtractMetaOperator(CommonLakeSparkOperator):

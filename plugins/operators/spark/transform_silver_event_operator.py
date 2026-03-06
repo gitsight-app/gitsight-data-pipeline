@@ -1,6 +1,6 @@
 from enum import EnumType
 
-from operators.spark.lake import CommonLakeSparkOperator
+from operators.spark.base.lake import CommonLakeSparkOperator
 
 
 class EventType(EnumType):

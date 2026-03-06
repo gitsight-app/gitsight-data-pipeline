@@ -10,6 +10,7 @@ from include.spark.common.decorators import spark_session_manager
 from include.spark.common.session_factory import SparkSessionFactory
 from include.spark.utils.arg_parse_utils import parse_required_args
 from include.spark.utils.col_utils import w_cols
+from include.spark.utils.condition_utils import get_ingested_at_between_condition
 
 source_fork_events_table_name = "nessie.gitsight.silver.fork_events"
 source_watch_events_table_name = "nessie.gitsight.silver.watch_events"
@@ -24,9 +25,7 @@ def update_gold_repo_metrics_hourly_job(
     start_ts = pendulum.parse(data_interval_start).start_of("hour")
     end_ts = pendulum.parse(data_interval_end).start_of("hour")
 
-    date_between = (F.col("ingested_at") >= F.lit(start_ts)) & (
-        F.col("ingested_at") < F.lit(end_ts)
-    )
+    date_between = get_ingested_at_between_condition(start_ts, end_ts)
 
     fork_events = spark.read.table(source_fork_events_table_name).where(date_between)
     watch_events = spark.read.table(source_watch_events_table_name).where(date_between)
@@ -60,8 +59,12 @@ def update_gold_repo_metrics_hourly_job(
 
     repo_metrics_df = calc_count_df.select(
         "*",
-        F.rank().over(Window.orderBy(F.col("star_count").desc())).alias("star_rank"),
-        F.rank().over(Window.orderBy(F.col("fork_count").desc())).alias("fork_rank"),
+        F.rank()
+        .over(Window.orderBy(F.col("star_count").desc(), F.col("repo_id").asc()))
+        .alias("star_rank"),
+        F.rank()
+        .over(Window.orderBy(F.col("fork_count").desc(), F.col("repo_id").asc()))
+        .alias("fork_rank"),
     )
 
     repo_master_df = spark.read.table(dim_silver_repo_master_table_name).select(
