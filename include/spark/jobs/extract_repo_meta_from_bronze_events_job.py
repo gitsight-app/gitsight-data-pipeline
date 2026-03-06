@@ -5,6 +5,7 @@ from pyspark.sql import functions as F
 from include.spark.common.decorators import spark_session_manager
 from include.spark.common.session_factory import SparkSessionFactory
 from include.spark.utils.arg_parse_utils import parse_required_args
+from include.spark.utils.condition_utils import get_ingested_at_between_condition
 
 repo_meta_table_name = "nessie.gitsight.bronze.repo_meta"
 
@@ -16,10 +17,8 @@ def extract_repo_meta_from_bronze_events_job(
     start_ts = pendulum.parse(data_interval_start).start_of("hour")
     end_ts = pendulum.parse(data_interval_end).start_of("hour")
 
-    date_between = (F.col("ingested_at") >= start_ts) & (F.col("ingested_at") < end_ts)
-
     events_df = spark.read.table("nessie.gitsight.bronze.gharchive_events").where(
-        date_between
+        get_ingested_at_between_condition(start_ts, end_ts)
     )
 
     repo_meta_df = events_df.select(

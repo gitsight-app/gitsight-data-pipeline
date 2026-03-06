@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
@@ -37,7 +35,7 @@ def transform_silver_events_from_bronze_job(
     :param kwargs:
     :return:
     """  # noqa: E501
-    start_ts = to_timestamp(data_interval_start) - timedelta(hours=2)
+    start_ts = to_timestamp(data_interval_start).subtract(hours=2)
     end_ts = to_timestamp(data_interval_end)
 
     logger.info(f"Transform {event_type} Table Between {start_ts} and {end_ts}")

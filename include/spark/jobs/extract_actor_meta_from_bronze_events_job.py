@@ -1,9 +1,10 @@
+import pendulum
 from pyspark.sql import functions as F
 
 from include.spark.common.decorators import spark_session_manager
 from include.spark.common.session_factory import SparkSessionFactory
 from include.spark.utils.arg_parse_utils import parse_required_args
-from include.spark.utils.time_utils import get_timestamp_col
+from include.spark.utils.condition_utils import get_ingested_at_between_condition
 
 actor_meta_table_name = "nessie.gitsight.bronze.actor_meta"
 
@@ -12,11 +13,11 @@ actor_meta_table_name = "nessie.gitsight.bronze.actor_meta"
 def extract_actor_meta_from_bronze_events_job(
     *, spark, data_interval_start, data_interval_end, logger, **kwargs
 ):
-    start_ts = get_timestamp_col(data_interval_start)
-    end_ts = get_timestamp_col(data_interval_end)
+    start_ts = pendulum.parse(data_interval_start)
+    end_ts = pendulum.parse(data_interval_end)
 
     events_df = spark.read.table("nessie.gitsight.bronze.gharchive_events").where(
-        (F.col("ingested_at") >= start_ts) & (F.col("ingested_at") < end_ts)
+        get_ingested_at_between_condition(start_ts, end_ts)
     )
 
     repo_meta_df = events_df.select(

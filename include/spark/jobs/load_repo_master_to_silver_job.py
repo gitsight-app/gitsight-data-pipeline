@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 import pendulum
 from pyspark.sql import SparkSession, Window
 from pyspark.sql import functions as F
@@ -16,7 +14,7 @@ target_repo_master_table_name: str = "nessie.gitsight.silver.repo_master"
 def load_repo_master_to_silver_job(
     *, spark: SparkSession, data_interval_start, data_interval_end, logger, **kwargs
 ):
-    start_ts = pendulum.parse(data_interval_start) - timedelta(hours=1)
+    start_ts = pendulum.parse(data_interval_start).subtract(hours=1)
     end_ts = pendulum.parse(data_interval_end)
 
     has_repo_id = F.col("repo_id").isNotNull()
