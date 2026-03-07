@@ -13,8 +13,14 @@ wheels/
 config
 logs
 
+# Production
+.env.prod
+docker-compose-prod.yaml
+docker-compose-prod-infra.yaml
+
 # EDA
 notebooks/data
 notebooks/.env
+
 # Virtual environments
 .venv
