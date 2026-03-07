@@ -19,8 +19,7 @@ docker-compose-prod.yaml
 docker-compose-prod-infra.yaml
 
 # EDA
-notebooks/data
-notebooks/.env
+notebooks
 
 # Virtual environments
 .venv
