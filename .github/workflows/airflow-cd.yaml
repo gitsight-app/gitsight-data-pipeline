@@ -22,6 +22,7 @@ jobs:
           ssh -i private_key.pem -o StrictHostKeyChecking=no \
           ${{ secrets.OCI_USER }}@${{ secrets.OCI_PUBLIC_SERVER_HOST }} \
           "cd /home/ubuntu/gitsight-data-pipeline && \
-           git pull origin main && \
-           cd scripts && \
-           sudo sh run_airflow.sh"
+           git pull origin main
+#           && \
+#           cd scripts && \
+#           sudo sh run_airflow.sh"
