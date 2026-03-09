@@ -36,3 +36,25 @@ class AwsEnricher(BaseEnricher):
             "spark.hadoop.fs.s3a.secret.key": aws_conn.password,
             "spark.hadoop.fs.s3a.connection.ssl.enabled": "false",
         }
+
+
+class OLTPEnricher(BaseEnricher):
+    def __init__(self, jdbc_conn_id: str = "postgres_default"):
+        self.jdbc_conn_id = jdbc_conn_id
+
+    def build(self):
+        jdbc_conn = BaseHook.get_connection(self.jdbc_conn_id)
+        extra = jdbc_conn.extra_dejson
+
+        base_url = f"jdbc:postgresql://{jdbc_conn.host}:{jdbc_conn.port}/{jdbc_conn.schema or 'postgres'}"  # noqa: E501
+        full_url = f"{base_url}?prepareThreshold=0"
+
+        return {
+            "spark.datasource.jdbc.url": full_url,
+            "spark.datasource.jdbc.user": jdbc_conn.login,
+            "spark.datasource.jdbc.port": jdbc_conn.port,
+            "spark.datasource.jdbc.password": jdbc_conn.password,
+            "spark.datasource.jdbc.driver": extra.get(
+                "driver", "org.postgresql.Driver"
+            ),
+        }

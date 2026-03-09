@@ -1,8 +1,8 @@
-from common.spark.spark_enrichers import AwsEnricher, CatalogEnricher
+from common.spark.spark_enrichers import AwsEnricher, CatalogEnricher, OLTPEnricher
 from operators.common.base_spark import BaseSparkOperator
 
 
-class CommonLakeSparkOperator(BaseSparkOperator):
+class CommonLakeOltpSparkOperator(BaseSparkOperator):
     """
     Lake Spark Operator
     Include: AWS Conn, Nessie Catalog
@@ -14,9 +14,10 @@ class CommonLakeSparkOperator(BaseSparkOperator):
         self,
         *,
         application,
-        application_args,
+        application_args=None,
         aws_conn_id="aws_default",
         catalog_conn_id="catalog_default",
+        jdbc_conn_id="postgres_default",
         **kwargs,
     ):
         super().__init__(
@@ -25,6 +26,7 @@ class CommonLakeSparkOperator(BaseSparkOperator):
             enrichers=[
                 AwsEnricher(aws_conn_id=aws_conn_id),
                 CatalogEnricher(catalog_conn_id=catalog_conn_id),
+                OLTPEnricher(jdbc_conn_id=jdbc_conn_id),
             ],
             **kwargs,
         )

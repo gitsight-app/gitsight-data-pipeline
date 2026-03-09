@@ -20,7 +20,7 @@ def spark_session_manager(func):
             return func(*args, **kwargs, logger=logger)
         except Exception as e:
             logger.error(f"ERROR in {func.__name__}: {e}")
-            raise
+            exit(1)
         finally:
             active_spark = SparkSession.getActiveSession()
             if active_spark:
