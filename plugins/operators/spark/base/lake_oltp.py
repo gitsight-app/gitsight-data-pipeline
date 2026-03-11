@@ -1,4 +1,8 @@
-from common.spark.spark_enrichers import AwsEnricher, CatalogEnricher, OLTPEnricher
+from common.spark.spark_enrichers import (
+    AwsEnricher,
+    CatalogEnricher,
+    OLTPEnricher,
+)
 from operators.common.base_spark import BaseSparkOperator
 
 

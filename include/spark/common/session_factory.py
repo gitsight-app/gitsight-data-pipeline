@@ -1,7 +1,12 @@
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
 
-from include.spark.common.dependencies import SPARK_EXTENSIONS, SPARK_PACKAGES
+SPARK_EXTENSIONS = ",".join(
+    [
+        "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+        "org.projectnessie.spark.extensions.NessieSparkSessionExtensions",
+    ]
+)
 
 
 class SparkSessionFactory:
@@ -19,10 +24,10 @@ class SparkSessionFactory:
             "spark.sql.session.timeZone": "UTC",
             "spark.sql.adaptive.enabled": "true",
             "spark.serializer": "org.apache.spark.serializer.KryoSerializer",
-            "spark.jars.packages": SPARK_PACKAGES,
             "spark.sql.extensions": SPARK_EXTENSIONS,
-            "spark.jars.driver.class": "org.postgresql.Driver",
             "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
+            "spark.hadoop.fs.s3a.multipart.size": "104857600",  # 100MB
+            "spark.hadoop.fs.s3a.fast.upload": "true",
             "spark.hadoop.fs.s3a.path.style.access": "true",
             "spark.sql.legacy.parquet.nanosAsLong": "true",
             "spark.hadoop.fs.s3a.connection.ssl.enabled": "false",

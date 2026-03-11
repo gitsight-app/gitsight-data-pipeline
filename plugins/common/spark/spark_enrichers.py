@@ -58,3 +58,13 @@ class OLTPEnricher(BaseEnricher):
                 "driver", "org.postgresql.Driver"
             ),
         }
+
+
+class SparkConfigEnricher(BaseEnricher):
+    def __init__(self, conn_id: str = "spark_config_default"):
+        self.conn_id = conn_id
+
+    def build(self):
+        spark_confs = BaseHook.get_connection(self.conn_id).extra_dejson
+
+        return {key: value for key, value in spark_confs.items()}
