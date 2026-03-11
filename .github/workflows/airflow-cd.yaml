@@ -13,8 +13,11 @@ jobs:
       - name: Create SSH key file
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
           echo "${{ secrets.OCI_SSH_KEY }}" > private_key.pem
           chmod 600 private_key.pem
+          
           ssh-keyscan -H ${{ secrets.OCI_PUBLIC_SERVER_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy Airflow on OCI Server
@@ -22,7 +25,6 @@ jobs:
           ssh -i private_key.pem -o StrictHostKeyChecking=no \
           ${{ secrets.OCI_USER }}@${{ secrets.OCI_PUBLIC_SERVER_HOST }} \
           "cd /home/ubuntu/gitsight-data-pipeline && \
-           git pull origin main
-#           && \
-#           cd scripts && \
-#           sudo sh run_airflow.sh"
+           git pull origin main && \
+           cd scripts && \
+           sudo sh run_airflow.sh"

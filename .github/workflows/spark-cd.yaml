@@ -12,14 +12,19 @@ jobs:
     steps:
       - name: Create SSH key file
         run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
           echo "${{ secrets.OCI_SSH_KEY }}" > private_key.pem
           chmod 600 private_key.pem
-          ssh-keyscan -H ${{ secrets.OCI_PRIVATE_SERVER_HOST }} >> ~/.ssh/known_hosts
+          
+          ssh-keyscan -H ${{ secrets.OCI_PUBLIC_SERVER_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy Spark on OCI Server
         run: |
           ssh -A -i private_key.pem \
-          -o ProxyCommand="ssh -i private_key.pem -W %h:%p ${{ secrets.OCI_USER }}@${{ secrets.OCI_PUBLIC_SERVER_HOST }}" \
+          -o StrictHostKeyChecking=no \
+          -o ProxyCommand="ssh -i private_key.pem -o StrictHostKeyChecking=no -W %h:%p ${{ secrets.OCI_USER }}@${{ secrets.OCI_PUBLIC_SERVER_HOST }}" \
           ${{ secrets.OCI_USER }}@${{ secrets.OCI_PRIVATE_SERVER_HOST }} \
           "cd /home/ubuntu/gitsight-data-pipeline && \
            git pull origin main && \
