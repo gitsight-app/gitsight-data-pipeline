@@ -1,18 +1,20 @@
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from airflow.utils.context import Context
 from common.spark.enricher_builder import SparkConfigBuilder
-from common.spark.spark_enrichers import BaseEnricher
-
-from include.spark.common.dependencies import SPARK_PACKAGES
+from common.spark.spark_enrichers import BaseEnricher, SparkConfigEnricher
 
 
 class BaseSparkOperator(SparkSubmitOperator):
-    def __init__(self, *, enrichers: list[BaseEnricher], **kwargs):
-        super().__init__(packages=SPARK_PACKAGES, **kwargs)
+    def __init__(
+        self,
+        *,
+        spark_config_conn_id: str = "spark_config_default",
+        enrichers: list[BaseEnricher],
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
         self.conf = self.conf or {}
-        self.conf.setdefault("spark.driver.extraClassPath", "/opt/airflow/jars/*")
-        self.conf.setdefault("spark.executor.extraClassPath", "/opt/airflow/jars/*")
-        self.enrichers = enrichers
+        self.enrichers = [SparkConfigEnricher(conn_id=spark_config_conn_id), *enrichers]
 
     def execute(self, context: Context) -> None:
         builder = SparkConfigBuilder()

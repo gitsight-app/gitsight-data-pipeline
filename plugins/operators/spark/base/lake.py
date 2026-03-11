@@ -1,4 +1,7 @@
-from common.spark.spark_enrichers import AwsEnricher, CatalogEnricher
+from common.spark.spark_enrichers import (
+    AwsEnricher,
+    CatalogEnricher,
+)
 from operators.common.base_spark import BaseSparkOperator
 
 

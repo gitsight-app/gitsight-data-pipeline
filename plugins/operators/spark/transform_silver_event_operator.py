@@ -6,6 +6,9 @@ from operators.spark.base.lake import CommonLakeSparkOperator
 class EventType(EnumType):
     WATCH = "WatchEvent"
     FORK = "ForkEvent"
+    PULL_REQUEST = "PullRequestEvent"
+    PUSH = "PushEvent"
+    ISSUES = "IssuesEvent"
 
 
 class TransformSilverEventOperator(CommonLakeSparkOperator):

@@ -239,11 +239,14 @@ services:
     image: gitsight/spark:3.5.1
     environment:
       - SPARK_MODE=master
+      - SPARK_PUBLIC_DNS=127.0.0.1
     ports:
-      - "8081:8080"
+      - "8090:8080"
       - "7077:7077"
 
   spark-worker:
+    ports:
+      - "8081:8081" # Spark Worker Web UI
     build:
       context: .
       dockerfile: Dockerfile-Spark
@@ -251,7 +254,9 @@ services:
     environment:
       - SPARK_MODE=worker
       - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_CORES=2
       - SPARK_WORKER_MEMORY=3G
+      - SPARK_PUBLIC_DNS=127.0.0.1
       - SPARK_WORKER_CORES=2
     depends_on:
       - spark-master
