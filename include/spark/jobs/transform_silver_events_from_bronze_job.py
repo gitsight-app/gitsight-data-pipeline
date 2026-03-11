@@ -46,8 +46,10 @@ def transform_silver_events_from_bronze_job(
     )
     type_eq_fork_event = F.col("type") == F.lit(event_type)
 
+    not_bot_user = ~F.col("actor.login").endswith("[bot]")
+
     source_df = spark.read.table(bronze_gharchive_events_table_name).filter(
-        has_identify_ids & date_between & type_eq_fork_event
+        has_identify_ids & date_between & type_eq_fork_event & not_bot_user
     )
 
     source_df = source_df.withColumn(
