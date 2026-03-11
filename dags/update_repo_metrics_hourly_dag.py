@@ -44,29 +44,31 @@ SELECT
     , ingested_hour
 FROM {{ ti.xcom_pull(task_ids='staging_gold_repo_metrics_table') }}
 ON CONFLICT (repo_id, ingested_at)
-DO UPDATE set
-    repo_name       = EXCLUDED.repo_name
-    , star_count      = EXCLUDED.star_count
-    , fork_count      = EXCLUDED.fork_count
-    , star_rank       = EXCLUDED.star_rank
-    , fork_rank       = EXCLUDED.fork_rank
-    , prev_star_count = EXCLUDED.prev_star_count
-    , prev_fork_count = EXCLUDED.prev_fork_count
-    , prev_star_rank  = EXCLUDED.prev_star_rank
-    , prev_fork_rank  = EXCLUDED.prev_fork_rank
-    , star_trend      = EXCLUDED.star_trend
-    , fork_trend      = EXCLUDED.fork_trend
-    , is_new          = EXCLUDED.is_new
-    , ingested_date   = EXCLUDED.ingested_date
-    , ingested_hour   = EXCLUDED.ingested_hour;
+DO UPDATE SET
+    repo_name       = excluded.repo_name
+    , star_count      = excluded.star_count
+    , fork_count      = excluded.fork_count
+    , star_rank       = excluded.star_rank
+    , fork_rank       = excluded.fork_rank
+    , prev_star_count = excluded.prev_star_count
+    , prev_fork_count = excluded.prev_fork_count
+    , prev_star_rank  = excluded.prev_star_rank
+    , prev_fork_rank  = excluded.prev_fork_rank
+    , star_trend      = excluded.star_trend
+    , fork_trend      = excluded.fork_trend
+    , is_new          = excluded.is_new
+    , ingested_date   = excluded.ingested_date
+    , ingested_hour   = excluded.ingested_hour;
 """
 
 with DAG(
-    dag_id="update_repo_metrics_hourly_dag",
+    dag_id="update_repo_metrics_hourly",
     schedule="20 * * * *",
     start_date=pendulum.datetime(2026, 1, 1),
     catchup=False,
 ) as dag:
+    spark_job_base_path = "/opt/airflow/include/spark/jobs/update_repo_metrics_hourly"
+
     wait_for_silver_events = ExternalTaskSensor(
         task_id="wait_for_silver_events",
         external_dag_id="github_events_transform",
@@ -87,7 +89,7 @@ with DAG(
     update_gold_repo_metrics_table = CommonLakeSparkOperator(
         task_id="update_gold_repo_metrics_table",
         py_files="{{ ti.xcom_pull(task_ids='deploy_spark_code') }}",
-        application="/opt/airflow/include/spark/jobs/update_gold_repo_metrics_hourly_job.py",
+        application=f"{spark_job_base_path}/update_gold_repo_metrics_hourly_job.py",
         application_args=[
             "--data_interval_start",
             "{{ data_interval_start }}",
@@ -104,7 +106,7 @@ with DAG(
         task_id="staging_gold_repo_metrics_table",
         data_interval_start="{{ data_interval_start }}",
         data_interval_end="{{ data_interval_end }}",
-        application="/opt/airflow/include/spark/jobs/load_oltp_gold_repo_metrics_hourly_to_staging_job.py",
+        application=f"{spark_job_base_path}/load_oltp_gold_repo_metrics_hourly_to_staging_job.py",
         aws_conn_id="aws_default",
         catalog_conn_id="catalog_default",
         jdbc_conn_id="postgres_default",
@@ -121,7 +123,7 @@ with DAG(
     clear_staging_repo_metrics_to_prod = SQLExecuteQueryOperator(
         task_id="clear_staging_repo_metrics_to_prod",
         conn_id="postgres_default",
-        sql="DROP TABLE if EXISTS {{ ti.xcom_pull(task_ids='staging_gold_repo_metrics_table') }}",  # noqa: E501
+        sql="DROP TABLE IF EXISTS {{ ti.xcom_pull(task_ids='staging_gold_repo_metrics_table') }}",  # noqa: E501
     )
 
     (

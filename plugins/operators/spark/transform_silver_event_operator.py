@@ -37,7 +37,7 @@ class TransformSilverEventOperator(CommonLakeSparkOperator):
         ]
 
         super().__init__(
-            application="/opt/airflow/include/spark/jobs/transform_silver_events_from_bronze_job.py",
+            application="/opt/airflow/include/spark/jobs/github_events_transform/transform_silver_events_from_bronze_job.py",
             application_args=application_args,
             aws_conn_id=aws_conn_id,
             catalog_conn_id=catalog_conn_id,
