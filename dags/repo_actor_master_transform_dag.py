@@ -13,6 +13,7 @@ with DAG(
     schedule="15 * * * *",
     catchup=False,
 ) as dag:
+    spark_job_base_path = "/opt/airflow/include/spark/jobs/repo_actor_master_transform"
     deploy_spark_code = CodeDeployOperator(
         task_id="deploy_spark_code",
         folder_path="/opt/airflow/include",
@@ -24,7 +25,7 @@ with DAG(
     load_repo_master_to_silver = CommonLakeSparkOperator(
         task_id="load_repo_master_to_silver",
         py_files="{{ ti.xcom_pull(task_ids='deploy_spark_code') }}",
-        application="/opt/airflow/include/spark/jobs/load_repo_master_to_silver_job.py",
+        application=f"{spark_job_base_path}/load_repo_master_to_silver_job.py",
         application_args=[
             "--data_interval_start",
             "{{ data_interval_start }}",
@@ -40,7 +41,7 @@ with DAG(
     load_actor_master_to_silver = CommonLakeSparkOperator(
         task_id="load_actor_master_to_silver",
         py_files="{{ ti.xcom_pull(task_ids='deploy_spark_code') }}",
-        application="/opt/airflow/include/spark/jobs/load_actor_master_to_silver_job.py",
+        application=f"{spark_job_base_path}/load_actor_master_to_silver_job.py",
         application_args=[
             "--data_interval_start",
             "{{ data_interval_start }}",

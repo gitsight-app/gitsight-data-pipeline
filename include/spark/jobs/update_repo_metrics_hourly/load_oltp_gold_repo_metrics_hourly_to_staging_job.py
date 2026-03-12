@@ -49,12 +49,12 @@ if __name__ == "__main__":
         "MergeToOltpGoldRepoMetricsHourlyJob"
     )
     args = parse_required_args(
-        ["data_interval_start", "data_interval_end", "staging_table_name"]
+        ["data_interval_start", "data_interval_end", "target_table_name"]
     )
 
     load_oltp_gold_repo_metrics_hourly_to_staging_job(
         spark=spark_session,
         data_interval_start=args.data_interval_start,
         data_interval_end=args.data_interval_end,
-        staging_table_name=args.staging_table_name,
+        staging_table_name=args.target_table_name,
     )
