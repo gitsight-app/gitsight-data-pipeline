@@ -114,7 +114,7 @@ with DAG(
         ],
         aws_conn_id="aws_default",
         catalog_conn_id="catalog_default",
-        jdbc_conn_id="postgres_default",
+        oltp_conn_id="postgres_default",
     )
 
     merge_staging_repo_metrics_to_prod = SQLExecuteQueryOperator(
