@@ -4,7 +4,7 @@ from airflow.providers.standard.sensors.external_task import ExternalTaskSensor
 from airflow.sdk import DAG
 from operators.common.code_deploy import CodeDeployOperator
 from operators.spark.base.lake import CommonLakeSparkOperator
-from operators.spark.load_to_oltp import LoadToOltpOperator
+from operators.spark.oltp_staging import LakeToOLTPStagingOperator
 
 UPSERT_QUERY = """
 INSERT INTO repo_metrics_hourly (
@@ -102,15 +102,19 @@ with DAG(
         verbose=True,
     )
 
-    staging_gold_repo_metrics_table = LoadToOltpOperator(
+    staging_gold_repo_metrics_table = LakeToOLTPStagingOperator(
         task_id="staging_gold_repo_metrics_table",
-        data_interval_start="{{ data_interval_start }}",
-        data_interval_end="{{ data_interval_end }}",
         application=f"{spark_job_base_path}/load_oltp_gold_repo_metrics_hourly_to_staging_job.py",
+        staging_table_name="repo_metrics_hourly_staging",
+        application_args=[
+            "--data_interval_start",
+            "{{ data_interval_start }}",
+            "--data_interval_end",
+            "{{ data_interval_end }}",
+        ],
         aws_conn_id="aws_default",
         catalog_conn_id="catalog_default",
         jdbc_conn_id="postgres_default",
-        staging_table_name="repo_metrics_hourly_staging_{{ ts_nodash }}",
     )
 
     merge_staging_repo_metrics_to_prod = SQLExecuteQueryOperator(
