@@ -38,19 +38,19 @@ def update_gold_repo_metrics_daily_job(
     event_count_by_repo_id_per_day_df = events_with_date_df.groupBy(
         F.col("repo_id"), F.col("created_date")
     ).agg(
-        F.count(
+        F.sum(
             F.when(F.col("event_type") == "WatchEvent", 1).otherwise(0),
         ).alias("star_count"),
-        F.count(
+        F.sum(
             F.when(F.col("event_type") == "ForkEvent", 1).otherwise(0),
         ).alias("fork_count"),
-        F.count(
+        F.sum(
             F.when(F.col("event_type") == "PullRequestEvent", 1).otherwise(0),
         ).alias("pr_count"),
-        F.count(
+        F.sum(
             F.when(F.col("event_type") == "IssuesEvent", 1).otherwise(0),
         ).alias("issues_count"),
-        F.count(
+        F.sum(
             F.when(F.col("event_type") == "PushEvent", 1).otherwise(0),
         ).alias("push_count"),
     )
