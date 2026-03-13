@@ -77,6 +77,7 @@ docker compose -f ./docker-compose-local.yaml up -d --build
 graph TD
     classDef bronze_t fill: #d7ccc8, stroke: #5d4037, stroke-width: 2px, color: black;
     classDef silver_t fill: #e0e0e0, stroke: #424242, stroke-width: 2px, color: black;
+    classDef silver_v fill: #e0e0e0, stroke: #424242, stroke-width: 2px, color: black;
     classDef gold_t fill: #fff9c4, stroke: #fbc02d, stroke-width: 3px, color: black;
     classDef api fill: #e1f5fe, stroke: #01579b, stroke-width: 1px, color: black;
 
@@ -106,10 +107,18 @@ graph TD
 %% --- %%
     WATCH_EVENTS[(silver/watch_events/ingested_date=yyyy-MM-dd/ingested_hour=HH)]:::silver_t
     PR_EVENTS[(silver/pr_events/ingested_date=yyyy-MM-dd/ingested_hour=HH)]:::silver_t
+    ISSUES_EVENTS[(silver/watch_events/ingested_date=yyyy-MM-dd/ingested_hour=HH)]:::silver_t
+    PUSH_EVENTS[(silver/watch_events/ingested_date=yyyy-MM-dd/ingested_hour=HH)]:::silver_t
+    FORK_EVENTS[(silver/watch_events/ingested_date=yyyy-MM-dd/ingested_hour=HH)]:::silver_t
+    UNIFIED_EVENTS[Unified Events View]:::silver_v
 
     subgraph hourly: github_events_transform_dag
-        GH_ARCHIVE_EVENTS -- overwritePartitions --> WATCH_EVENTS
-        GH_ARCHIVE_EVENTS -- overwritePartitions --> PR_EVENTS
+        GH_ARCHIVE_EVENTS -- overwritePartitions --> WATCH_EVENTS --> UNIFIED_EVENTS
+        GH_ARCHIVE_EVENTS -- overwritePartitions --> PR_EVENTS --> UNIFIED_EVENTS
+        GH_ARCHIVE_EVENTS -- overwritePartitions --> ISSUES_EVENTS --> UNIFIED_EVENTS
+        GH_ARCHIVE_EVENTS -- overwritePartitions --> PUSH_EVENTS --> UNIFIED_EVENTS
+        GH_ARCHIVE_EVENTS -- overwritePartitions --> FORK_EVENTS --> UNIFIED_EVENTS
+
 
     end
 %% --- %%

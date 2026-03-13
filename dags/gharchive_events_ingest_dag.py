@@ -3,7 +3,7 @@ from airflow.sdk import DAG
 from hook.gh_archive import GHArchiveHook
 from operators.common.code_deploy import CodeDeployOperator
 from operators.spark.base.lake import CommonLakeSparkOperator
-from operators.spark.extract_meta_operator import ExtractMetaOperator
+from operators.spark.extract_meta import ExtractMetaOperator
 from pendulum import datetime
 
 

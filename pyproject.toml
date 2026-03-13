@@ -10,9 +10,12 @@ dependencies = [
     "apache-airflow-providers-apache-spark>=5.2.1",
     "asyncio>=4.0.0",
     "dotenv>=0.9.9",
+    "flashgeotext>=0.5.5",
     "numpy<2.0.0",
+    "pandas>=2.3.3",
     "polars>=1.38.1",
     "pyarrow>=22.0.0",
+    "pycountry>=26.2.16",
     "pyiceberg>=0.11.1",
     "pyspark==3.5.1",
 ]
