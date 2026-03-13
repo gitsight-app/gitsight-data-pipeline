@@ -13,6 +13,10 @@ class CommonLakeSparkOperator(BaseSparkOperator):
 
     template_fields = (*BaseSparkOperator.template_fields,)
 
+    def execute(self, context) -> None:
+
+        return super().execute(context)
+
     def __init__(
         self,
         *,
@@ -31,7 +35,3 @@ class CommonLakeSparkOperator(BaseSparkOperator):
             ],
             **kwargs,
         )
-
-    def execute(self, context) -> None:
-
-        return super().execute(context)
