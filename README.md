@@ -75,10 +75,13 @@ docker compose -f ./docker-compose-local.yaml up -d --build
 
 ```mermaid
 graph LR
+    classDef oltp fill: #cfd8dc, stroke: #37474f, stroke-width: 2px, color: #263238, stroke-dasharray: 5 5;
     classDef bronze_t fill: #d7ccc8, stroke: #5d4037, stroke-width: 2px, color: black;
+    classDef bronze_v fill: #efe5e2, stroke: #5d4037, stroke-width: 1px, color: #5d4037, stroke-dasharray: 3 3;
     classDef silver_t fill: #e0e0e0, stroke: #424242, stroke-width: 2px, color: black;
-    classDef silver_v fill: #e0e0e0, stroke: #424242, stroke-width: 2px, color: black;
+    classDef silver_v fill: #f5f5f5, stroke: #9e9e9e, stroke-width: 1px, color: #616161, stroke-dasharray: 3 3;
     classDef gold_t fill: #fff9c4, stroke: #fbc02d, stroke-width: 3px, color: black;
+    classDef gold_v fill: #fffde7, stroke: #fbc02d, stroke-width: 1px, color: #827717, stroke-dasharray: 3 3;
     classDef api fill: #e1f5fe, stroke: #01579b, stroke-width: 1px, color: black;
 
 
@@ -89,6 +92,7 @@ graph LR
     GH_ARCHIVE_EVENTS[(bronze/gharchive_events/ingested_at_hour=yyyy-MM-dd-HH)]:::bronze_t
     ACTOR_META[(bronze/actor_meta/ingested_at_hour=yyyy-MM-dd-HH)]:::bronze_t
     REPO_META[(bronze/repo_meta/ingested_at_hour=yyyy-MM-dd-HH)]:::bronze_t
+    classDef process fill: #fff3e0, stroke: #ef6c00, stroke-width: 2px, color: #e65100, font-weight: bold;
     GH_ARCHIVE_API --> GH_ARCHIVE
     GH_ARCHIVE -- overwritePartitions --> GH_ARCHIVE_EVENTS
     subgraph hourly: gharchive_events_ingest_dag
@@ -125,15 +129,19 @@ graph LR
 %% --- %%
     REPO_METRICS_HOURLY[(gold/repo_hourly_metrics/ingested_at_hour=yyyy-MM-dd-HH)]:::gold_t
     UNIFIED_EVENTS -- filter Star, Fork Events --> FILTERED_EVENTS
+    OLTP_REPO_METRICS_HOURLY:::oltp
 
     subgraph hourly: repo_metrics_hourly_dag
         FILTERED_EVENTS -- overwritePartitions --> REPO_METRICS_HOURLY
+        REPO_METRICS_HOURLY -- top 20 repos per hour --> OLTP_REPO_METRICS_HOURLY
     end
 %% --- %%
     REPO_METRICS_DAILY[(gold/repo_hourly_metrics/created_at=yyyy-MM-dd)]:::gold_t
+    OLTP_REPO_METRICS_DAILY:::oltp
 
     subgraph daily: repo_metrics_daily_dag
         UNIFIED_EVENTS --> REPO_METRICS_DAILY
+        REPO_METRICS_DAILY --> OLTP_REPO_METRICS_DAILY
 
 
     end
@@ -145,7 +153,25 @@ graph LR
         UNIFIED_EVENTS --> ACTOR_DETAIL_RAW
         GITHUB_OPEN_API -- use mapPartitions, UDF --> ACTOR_DETAIL_RAW
         ACTOR_DETAIL_RAW -- dedup & upsert --> ACTOR_DETAIL_SCD
+    end
+%% --- %%
+    REPO_CONTRIBUTION_METRICS_DAILY[(gold/repo_contribution_metrics_daily/created_at=yyyy-MM-dd)]:::gold_t
+    OLTP_REPO_CONTRIBUTION_METRICS_DAILY:::oltp
+    EXTRACT_ACTORS[/SELECT FROM EVENTS WHERE REPO_ID =/]:::process
 
+    subgraph daily: update_repo_contribution_by_country_day
+        ACTOR_MASTER --> EXTRACT_ACTORS
+        UNIFIED_EVENTS --> EXTRACT_ACTORS
+        REPO_METRICS_HOURLY --> EXTRACT_ACTORS
+        ACTOR_DETAIL_SCD --> EXTRACT_ACTORS
+        EXTRACT_ACTORS --> REPO_CONTRIBUTION_METRICS_DAILY
+        REPO_CONTRIBUTION_METRICS_DAILY --> OLTP_REPO_CONTRIBUTION_METRICS_DAILY
+    end
+
+    subgraph OLTP
+        OLTP_REPO_METRICS_HOURLY
+        OLTP_REPO_METRICS_DAILY
+        OLTP_REPO_CONTRIBUTION_METRICS_DAILY
 
     end
 
