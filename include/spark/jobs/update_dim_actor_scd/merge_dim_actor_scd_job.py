@@ -6,6 +6,7 @@ from pyspark.sql.connect.dataframe import DataFrame
 from include.spark.common.decorators import spark_session_manager
 from include.spark.common.session_factory import SparkSessionFactory
 from include.spark.utils.arg_parse_utils import parse_required_args
+from include.spark.utils.condition_utils import get_ingested_at_between_condition
 from include.spark.utils.country_utils import (
     SUBDIVISION_TO_COUNTRY,
     get_extract_country_udf,
@@ -13,7 +14,7 @@ from include.spark.utils.country_utils import (
 
 source_actor_detail_raw_table_name = "nessie.gitsight.bronze.actor_detail_raw"
 target_actor_detail_scd_table_name = "nessie.gitsight.silver.actor_detail_scd"
-actor_detail_view_name = "actor_detail_view"
+actor_detail_view_name = "nessie.gitsight.silver.actor_detail_view"
 
 
 @spark_session_manager
@@ -23,15 +24,11 @@ def merge_dim_actor_detail_scd_job(
     clean_regex = r"[^\p{L}\p{N}\s\-_&,().]"
     at_regex = r"^@"
     target_ts = pendulum.parse(target_datetime)
-    target_date = target_ts.date()
-    target_hour = target_ts.hour
-
-    in_target_date = (F.col("ingested_date") == F.lit(target_date)) & (
-        F.col("ingested_hour") == F.lit(target_hour)
-    )
+    start_ts = target_ts.start_of("hour")
+    end_ts = target_ts.end_of("hour").add(hours=1)
 
     actor_detail_raw_df = spark.read.table(source_actor_detail_raw_table_name).filter(
-        in_target_date
+        get_ingested_at_between_condition(start_ts, end_ts)
     )
 
     window_spec = Window.partitionBy("user_id").orderBy(F.col("ingested_at").desc())
@@ -53,7 +50,7 @@ def merge_dim_actor_detail_scd_job(
     subdivision_bc = spark.sparkContext.broadcast(SUBDIVISION_TO_COUNTRY)
 
     processed_df = processed_df.withColumn(
-        "country_extracted", get_extract_country_udf(subdivision_bc)(F.col("location"))
+        "country", get_extract_country_udf(subdivision_bc)(F.col("location"))
     )
     current_batch_time = F.to_timestamp(F.lit(target_ts))
     max_future_time = F.to_timestamp(F.lit("9999-12-31 23:59:59"))
@@ -70,7 +67,7 @@ def merge_dim_actor_detail_scd_job(
             F.concat_ws(
                 "|",
                 F.coalesce(F.col("name"), F.lit("")),
-                F.coalesce(F.col("country_extracted"), F.lit("")),
+                F.coalesce(F.col("country"), F.lit("")),
                 F.coalesce(F.col("company"), F.lit("")),
             ),
             256,
@@ -94,9 +91,11 @@ def _create_actor_detail_table(df: DataFrame):
     (
         df.writeTo(target_actor_detail_scd_table_name)
         .tableProperty("format-version", "2")
-        .tableProperty("write.format.default", "parquet")
+        .tableProperty("write.update.mode", "merge-on-read")
+        .tableProperty("write.delete.mode", "merge-on-read")
+        .tableProperty("write.merge.mode", "merge-on-read")
         .tableProperty("write.metadata.delete-after-commit.enabled", "true")
-        .partitionedBy(F.col("is_current"))
+        .partitionedBy(F.hours("ingested_at"), F.col("is_current"))
         .create()
     )
 
@@ -147,9 +146,7 @@ def _query_merge_dim_actor_scd(spark: SparkSession, source_name: str, target_nam
                 , user_created_at
                 , user_updated_at
                 , ingested_at
-                , ingested_date
-                , ingested_hour
-                , country_extracted
+                , country
                 , valid_from
                 , valid_to
                 , is_current
@@ -166,9 +163,7 @@ def _query_merge_dim_actor_scd(spark: SparkSession, source_name: str, target_nam
                 , source.user_created_at
                 , source.user_updated_at
                 , source.ingested_at
-                , source.ingested_date
-                , source.ingested_hour
-                , source.country_extracted
+                , source.country
                 , source.valid_from
                 , source.valid_to
                 , true

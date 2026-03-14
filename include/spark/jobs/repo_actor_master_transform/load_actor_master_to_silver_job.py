@@ -5,6 +5,7 @@ from pyspark.sql import functions as F
 from include.spark.common.decorators import spark_session_manager
 from include.spark.common.session_factory import SparkSessionFactory
 from include.spark.utils.arg_parse_utils import parse_required_args
+from include.spark.utils.condition_utils import get_ingested_at_between_condition
 
 source_repo_meta_table_name = "nessie.gitsight.bronze.actor_meta"
 target_repo_master_table_name: str = "nessie.gitsight.silver.actor_master"
@@ -19,12 +20,8 @@ def load_actor_master_to_silver_job(
 
     has_actor_id = F.col("actor_id").isNotNull()
 
-    date_between = (F.col("ingested_at") >= F.lit(start_ts)) & (
-        F.col("ingested_at") < F.lit(end_ts)
-    )
-
     source_df = spark.read.table(source_repo_meta_table_name).where(
-        has_actor_id & date_between
+        has_actor_id & get_ingested_at_between_condition(start_ts, end_ts)
     )
 
     window = Window.partitionBy("actor_id").orderBy(

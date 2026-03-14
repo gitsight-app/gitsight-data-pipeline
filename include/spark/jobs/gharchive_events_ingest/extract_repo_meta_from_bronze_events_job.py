@@ -27,7 +27,6 @@ def extract_repo_meta_from_bronze_events_job(
         F.col("repo.url").alias("repo_url"),
         F.col("created_at").alias("created_at"),
         F.col("ingested_at").alias("ingested_at"),
-        F.col("ingested_date").alias("ingested_date"),
     )
 
     logger.info(
@@ -40,15 +39,11 @@ def extract_repo_meta_from_bronze_events_job(
         (
             repo_meta_df.writeTo(repo_meta_table_name)
             .tableProperty("format-version", "2")
-            .partitionedBy(F.col("ingested_date"))
+            .partitionedBy(F.hours("ingested_at"))
             .create()
         )
     else:
-        (
-            repo_meta_df.writeTo(repo_meta_table_name)
-            .partitionedBy(F.col("ingested_date"))
-            .append()
-        )
+        (repo_meta_df.writeTo(repo_meta_table_name).append())
 
 
 if __name__ == "__main__":

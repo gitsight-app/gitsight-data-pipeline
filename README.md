@@ -74,7 +74,7 @@ docker compose -f ./docker-compose-local.yaml up -d --build
 ### Data Flow
 
 ```mermaid
-graph TD
+graph LR
     classDef bronze_t fill: #d7ccc8, stroke: #5d4037, stroke-width: 2px, color: black;
     classDef silver_t fill: #e0e0e0, stroke: #424242, stroke-width: 2px, color: black;
     classDef silver_v fill: #e0e0e0, stroke: #424242, stroke-width: 2px, color: black;
@@ -84,10 +84,11 @@ graph TD
 
 %% -------------------------- Components -------------------------- %%
     GH_ARCHIVE_API[(GHArchive API)]:::api
+    GITHUB_OPEN_API[(GitHub OPEN API)]:::api
     GH_ARCHIVE[(raw/gharchive/yyyy-MM-dd-HH.json.gz)]
-    GH_ARCHIVE_EVENTS[(bronze/gharchive_events/ingested_date=yyyy-MM-dd/ingested_hour=HH)]:::bronze_t
-    ACTOR_META[(bronze/actor_meta/ingested_date=yyyy-MM-dd)]:::bronze_t
-    REPO_META[(bronze/repo_meta/ingested_date=yyyy-MM-dd)]:::bronze_t
+    GH_ARCHIVE_EVENTS[(bronze/gharchive_events/ingested_at_hour=yyyy-MM-dd-HH)]:::bronze_t
+    ACTOR_META[(bronze/actor_meta/ingested_at_hour=yyyy-MM-dd-HH)]:::bronze_t
+    REPO_META[(bronze/repo_meta/ingested_at_hour=yyyy-MM-dd-HH)]:::bronze_t
     GH_ARCHIVE_API --> GH_ARCHIVE
     GH_ARCHIVE -- overwritePartitions --> GH_ARCHIVE_EVENTS
     subgraph hourly: gharchive_events_ingest_dag
@@ -105,11 +106,11 @@ graph TD
 
     end
 %% --- %%
-    WATCH_EVENTS[(silver/watch_events/ingested_date=yyyy-MM-dd/ingested_hour=HH)]:::silver_t
-    PR_EVENTS[(silver/pr_events/ingested_date=yyyy-MM-dd/ingested_hour=HH)]:::silver_t
-    ISSUES_EVENTS[(silver/watch_events/ingested_date=yyyy-MM-dd/ingested_hour=HH)]:::silver_t
-    PUSH_EVENTS[(silver/watch_events/ingested_date=yyyy-MM-dd/ingested_hour=HH)]:::silver_t
-    FORK_EVENTS[(silver/watch_events/ingested_date=yyyy-MM-dd/ingested_hour=HH)]:::silver_t
+    WATCH_EVENTS[(silver/watch_events/ingested_at_hour=yyyy-MM-dd-HH)]:::silver_t
+    PR_EVENTS[(silver/pr_events/ingested_at_hour=yyyy-MM-dd-HH)]:::silver_t
+    ISSUES_EVENTS[(silver/watch_events/ingested_at_hour=yyyy-MM-dd-HH)]:::silver_t
+    PUSH_EVENTS[(silver/watch_events/ingested_at_hour=yyyy-MM-dd-HH)]:::silver_t
+    FORK_EVENTS[(silver/watch_events/ingested_at_hour=yyyy-MM-dd-HH)]:::silver_t
     UNIFIED_EVENTS[Unified Events View]:::silver_v
 
     subgraph hourly: github_events_transform_dag
@@ -122,15 +123,33 @@ graph TD
 
     end
 %% --- %%
-    REPO_HOURLY_METRICS[(gold/repo_hourly_metrics/ingested_date=yyyy-MM-dd/ingested_hour=HH)]:::gold_t
-    JOINED_DATA
+    REPO_METRICS_HOURLY[(gold/repo_hourly_metrics/ingested_at_hour=yyyy-MM-dd-HH)]:::gold_t
+    UNIFIED_EVENTS -- filter Star, Fork Events --> FILTERED_EVENTS
 
     subgraph hourly: repo_metrics_hourly_dag
-        REPO_MASTER --> JOINED_DATA
-        WATCH_EVENTS --> JOINED_DATA
-        PR_EVENTS --> JOINED_DATA
-        JOINED_DATA -- overwritePartitions --> REPO_HOURLY_METRICS
+        FILTERED_EVENTS -- overwritePartitions --> REPO_METRICS_HOURLY
     end
+%% --- %%
+    REPO_METRICS_DAILY[(gold/repo_hourly_metrics/created_at=yyyy-MM-dd)]:::gold_t
+
+    subgraph daily: repo_metrics_daily_dag
+        UNIFIED_EVENTS --> REPO_METRICS_DAILY
+
+
+    end
+%% --- %%
+    ACTOR_DETAIL_RAW[(bronze/actor_detail_raw/ingested_at_hour=yyyy-MM-dd-HH)]:::bronze_t
+    ACTOR_DETAIL_SCD[(silver/actor_detail_scd/is_current=true, false /ingested_at_hour=yyyy-MM-dd-HH/)]:::silver_t
+
+    subgraph hourly: update_dim_actor_scd_dag
+        UNIFIED_EVENTS --> ACTOR_DETAIL_RAW
+        GITHUB_OPEN_API -- use mapPartitions, UDF --> ACTOR_DETAIL_RAW
+        ACTOR_DETAIL_RAW -- dedup & upsert --> ACTOR_DETAIL_SCD
+
+
+    end
+
+
 
 
 

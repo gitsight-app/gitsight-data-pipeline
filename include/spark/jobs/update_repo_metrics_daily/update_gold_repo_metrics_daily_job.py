@@ -1,3 +1,7 @@
+from typing import Union
+
+import pendulum
+from pyspark.sql import Column
 from pyspark.sql import functions as F
 from pyspark.sql.connect.dataframe import DataFrame
 from pyspark.sql.connect.session import SparkSession
@@ -25,15 +29,17 @@ def update_gold_repo_metrics_daily_job(
     **kwargs,
 ):
     logger.info(f"Start to update gold repo metrics for date: {target_date}")
+    start_ts = pendulum.parse(target_date).start_of("day")
+    end_ts = pendulum.parse(target_date).end_of("day")
 
     events_df = spark.read.table(SOURCE_EVENT_TABLE_NAMES[0])
 
-    for table_name in SOURCE_EVENT_TABLE_NAMES[1:]:
-        events_df = _union_source_events(spark, events_df, table_name, target_date)
+    date_between = (F.col("ingested_at") >= start_ts) & (F.col("ingested_at") < end_ts)
 
-    events_with_date_df = events_df.withColumn(
-        "created_date", F.to_date(F.substring(F.col("created_at"), 1, 10))
-    )
+    for table_name in SOURCE_EVENT_TABLE_NAMES[1:]:
+        events_df = _union_source_events(spark, events_df, table_name, date_between)
+
+    events_with_date_df = events_df.withColumn("created_date", F.to_date("created_at"))
 
     event_count_by_repo_id_per_day_df = events_with_date_df.groupBy(
         F.col("repo_id"), F.col("created_date")
@@ -63,19 +69,15 @@ def update_gold_repo_metrics_daily_job(
         (
             result_df.writeTo(target_table_name)
             .tableProperty("format-version", "2")
-            .partitionedBy(F.col("created_date"))
+            .partitionedBy(F.days("created_date"))
             .create()
         )
     else:
-        (
-            result_df.writeTo(target_table_name)
-            .partitionedBy(F.col("created_date"))
-            .overwritePartitions()
-        )
+        result_df.writeTo(target_table_name).overwritePartitions()
 
 
 def _union_source_events(
-    spark, df: DataFrame, df2_name: str, target_date: str
+    spark, df: DataFrame, df2_name: str, condition: Union[Column, str]
 ) -> DataFrame:
     """
     df.union(df2)
@@ -85,7 +87,7 @@ def _union_source_events(
     :param target_date:
     :return:
     """
-    df2 = spark.read.table(df2_name).where(F.col("ingested_date") == F.lit(target_date))
+    df2 = spark.read.table(df2_name).where(condition)
 
     return df.unionAll(df2)
 
