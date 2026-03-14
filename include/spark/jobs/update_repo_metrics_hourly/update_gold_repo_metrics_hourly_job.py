@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 import pendulum
 from pyspark.sql import SparkSession, Window
 from pyspark.sql import functions as F
@@ -9,11 +7,10 @@ from pyspark.sql.types import IntegerType
 from include.spark.common.decorators import spark_session_manager
 from include.spark.common.session_factory import SparkSessionFactory
 from include.spark.utils.arg_parse_utils import parse_required_args
-from include.spark.utils.col_utils import w_cols
 from include.spark.utils.condition_utils import get_ingested_at_between_condition
 
-source_fork_events_table_name = "nessie.gitsight.silver.fork_events"
-source_watch_events_table_name = "nessie.gitsight.silver.watch_events"
+source_events_table_name = "nessie.gitsight.silver.unified_events"
+
 dim_silver_repo_master_table_name = "nessie.gitsight.silver.repo_master"
 target_gold_repo_metrics_table_name = "nessie.gitsight.gold.repo_metrics_hourly"
 
@@ -27,8 +24,12 @@ def update_gold_repo_metrics_hourly_job(
 
     date_between = get_ingested_at_between_condition(start_ts, end_ts)
 
-    fork_events = spark.read.table(source_fork_events_table_name).where(date_between)
-    watch_events = spark.read.table(source_watch_events_table_name).where(date_between)
+    fork_events = spark.read.table(source_events_table_name).where(
+        date_between & (F.col("event_type") == F.lit("ForkEvent"))
+    )
+    watch_events = spark.read.table(source_events_table_name).where(
+        date_between & (F.col("event_type") == F.lit("WatchEvent"))
+    )
 
     logger.info(
         f"Fork, Watch Events Count: ({fork_events.count()}, {watch_events.count()})"
@@ -109,16 +110,10 @@ def _create_or_replace_gold_repo_metrics_table(df: DataFrame):
         F.lit(True).alias("is_new"),
     ).orderBy(F.col("star_count").desc(), F.col("fork_count").desc())
 
-    result_df = w_cols(
-        result_df,
-        ("ingested_date", F.to_date("ingested_at")),
-        ("ingested_hour", F.hour("ingested_at")),
-    )
-
     (
         result_df.writeTo("nessie.gitsight.gold.repo_metrics_hourly")
         .tableProperty("format-version", "2")
-        .partitionedBy(F.col("ingested_date"), F.col("ingested_hour"))
+        .partitionedBy(F.hours("ingested_at"))
         .createOrReplace()
     )
 
@@ -129,13 +124,15 @@ def update_gold_repo_metrics_table(
     curr_start_ts: pendulum.datetime,
     curr_end_ts: pendulum.datetime,
 ):
-    prev_start_ts = curr_start_ts - timedelta(hours=1)
-    prev_end_ts = curr_end_ts - timedelta(hours=1)
+
+    prev_start_ts = curr_start_ts.subtract(hours=1)
+    prev_end_ts = curr_end_ts.subtract(hours=1)
 
     repo_metrics_hourly_df = spark.read.table(
         target_gold_repo_metrics_table_name
-    ).filter(
-        (F.col("ingested_at") >= prev_start_ts) & (F.col("ingested_at") < prev_end_ts)
+    ).where(
+        (F.col("ingested_at") >= F.lit(prev_start_ts))
+        & (F.col("ingested_at") < F.lit(prev_end_ts))
     )
 
     calc_star_trend = F.when(F.col("prev_metrics.star_rank").isNull(), 0).otherwise(
@@ -175,15 +172,9 @@ def update_gold_repo_metrics_table(
         )
     )
 
-    result_df = w_cols(
-        result_df,
-        ("ingested_date", F.to_date("ingested_at")),
-        ("ingested_hour", F.hour("ingested_at")),
-    )
-
     (
         result_df.writeTo("nessie.gitsight.gold.repo_metrics_hourly")
-        .partitionedBy(F.col("ingested_date"), F.col("ingested_hour"))
+        .option("mergeSchema", "true")
         .overwritePartitions()
     )
 

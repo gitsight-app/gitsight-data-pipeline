@@ -15,6 +15,7 @@ from include.spark.jobs.update_dim_actor_scd.worker_logic import (
     fetch_users_partition,
 )
 from include.spark.utils.arg_parse_utils import parse_required_args
+from include.spark.utils.condition_utils import get_ingested_at_between_condition
 
 source_unified_events_view_name = "nessie.gitsight.silver.unified_events"
 target_actor_detail_raw_table_name = "nessie.gitsight.bronze.actor_detail_raw"
@@ -43,19 +44,16 @@ def fetch_actor_detail_to_raw_job(
     logger,
     **kwargs,
 ):
-    datetime = pendulum.parse(target_datetime)
-    target_date = datetime.to_date_string()
-    target_hour = datetime.hour
+    target_ts = pendulum.parse(target_datetime)
+    start_ts = target_ts.start_of("hour")
+    end_ts = target_ts.start_of("hour").add(hours=1)
 
     logger.info(
-        f"Start Fetching Dimension Active Actor Detail (date: {target_date}, hour: {target_hour})"  # noqa: E501
-    )
-    between_target_ingested = (F.col("ingested_date") == F.lit(target_date)) & (
-        F.col("ingested_hour") == F.lit(target_hour)
+        f"Start Fetching Dimension Active Actor Detail (between: {start_ts}, hour: {end_ts})"  # noqa: E501
     )
 
     source_df = spark.read.table(source_unified_events_view_name).filter(
-        between_target_ingested
+        get_ingested_at_between_condition(start_ts, end_ts)
     )
     source_df = source_df.repartition(5, F.col("actor_id"))
 
@@ -73,25 +71,21 @@ def fetch_actor_detail_to_raw_job(
     )
     actor_detail_raw_df = actor_detail_raw_rdd.toDF(schema)
 
-    actor_detail_raw_df = actor_detail_raw_df.withColumn("ingested_at", F.lit(datetime))
-
-    actor_detail_raw_df = actor_detail_raw_df.select(
-        "*",
-        F.to_date(F.col("ingested_at")).alias("ingested_date"),
-        F.hour(F.col("ingested_at")).alias("ingested_hour"),
+    actor_detail_raw_df = actor_detail_raw_df.withColumn(
+        "ingested_at", F.lit(target_ts).cast("timestamp")
     )
 
     if not spark.catalog.tableExists(target_actor_detail_raw_table_name):
         (
             actor_detail_raw_df.writeTo(target_actor_detail_raw_table_name)
             .tableProperty("format-version", "2")
-            .partitionedBy(F.col("ingested_date"), F.col("ingested_hour"))
+            .partitionedBy(F.hours("ingested_at"))
             .create()
         )
     else:
         (
             actor_detail_raw_df.writeTo(target_actor_detail_raw_table_name)
-            .partitionedBy(F.col("ingested_date"), F.col("ingested_hour"))
+            .option("mergeSchema", "true")
             .append()
         )
 

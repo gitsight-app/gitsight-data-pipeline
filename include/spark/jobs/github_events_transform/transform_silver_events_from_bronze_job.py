@@ -4,6 +4,7 @@ from pyspark.sql import functions as F
 from include.spark.common.decorators import spark_session_manager
 from include.spark.common.session_factory import SparkSessionFactory
 from include.spark.utils.arg_parse_utils import parse_required_args
+from include.spark.utils.condition_utils import get_ingested_at_between_condition
 from include.spark.utils.time_utils import to_timestamp
 
 bronze_gharchive_events_table_name = "nessie.gitsight.bronze.gharchive_events"
@@ -41,15 +42,15 @@ def transform_silver_events_from_bronze_job(
     logger.info(f"Transform {event_type} Table Between {start_ts} and {end_ts}")
 
     has_identify_ids = F.col("repo.id").isNotNull() & F.col("actor.id").isNotNull()
-    date_between = (F.col("ingested_at") >= F.lit(start_ts)) & (
-        F.col("ingested_at") < F.lit(end_ts)
-    )
     type_eq_fork_event = F.col("type") == F.lit(event_type)
 
     not_bot_user = ~F.col("actor.login").endswith("[bot]")
 
     source_df = spark.read.table(bronze_gharchive_events_table_name).filter(
-        has_identify_ids & date_between & type_eq_fork_event & not_bot_user
+        has_identify_ids
+        & get_ingested_at_between_condition(start_ts, end_ts)
+        & type_eq_fork_event
+        & not_bot_user
     )
 
     source_df = source_df.withColumn(
@@ -64,21 +65,19 @@ def transform_silver_events_from_bronze_job(
         F.col("action"),
         F.col("created_at"),
         F.col("ingested_at"),
-        F.col("ingested_date"),
-        F.col("ingested_hour"),
     )
 
     if not spark.catalog.tableExists(target_table):
         (
             result_df.writeTo(target_table)
             .tableProperty("format-version", "2")
-            .partitionedBy(F.col("ingested_date"), F.col("ingested_hour"))
+            .partitionedBy(F.hours("ingested_at"))
             .createOrReplace()
         )
     else:
         (
             result_df.writeTo(target_table)
-            .partitionedBy(F.col("ingested_date"), F.col("ingested_hour"))
+            .option("mergeSchema", "true")
             .overwritePartitions()
         )
 

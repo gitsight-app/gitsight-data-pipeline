@@ -5,6 +5,7 @@ from pyspark.sql import functions as F
 from include.spark.common.decorators import spark_session_manager
 from include.spark.common.session_factory import SparkSessionFactory
 from include.spark.utils.arg_parse_utils import parse_required_args
+from include.spark.utils.condition_utils import get_ingested_at_between_condition
 
 source_repo_meta_table_name = "nessie.gitsight.bronze.repo_meta"
 target_repo_master_table_name: str = "nessie.gitsight.silver.repo_master"
@@ -14,17 +15,13 @@ target_repo_master_table_name: str = "nessie.gitsight.silver.repo_master"
 def load_repo_master_to_silver_job(
     *, spark: SparkSession, data_interval_start, data_interval_end, logger, **kwargs
 ):
-    start_ts = pendulum.parse(data_interval_start).subtract(hours=1)
-    end_ts = pendulum.parse(data_interval_end)
+    start_ts = pendulum.parse(data_interval_start).start_of("hour")
+    end_ts = pendulum.parse(data_interval_end).start_of("hour")
 
     has_repo_id = F.col("repo_id").isNotNull()
 
-    date_between = (F.col("ingested_at") >= F.lit(start_ts)) & (
-        F.col("ingested_at") < F.lit(end_ts)
-    )
-
     source_df = spark.read.table(source_repo_meta_table_name).where(
-        has_repo_id & date_between
+        has_repo_id & get_ingested_at_between_condition(start_ts, end_ts)
     )
 
     window = Window.partitionBy("repo_id").orderBy(

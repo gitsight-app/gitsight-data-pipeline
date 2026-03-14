@@ -22,28 +22,18 @@ def extract_gharchive_events_to_bronze(
         "ingested_at", F.to_timestamp(F.lit(data_interval_start))
     )
 
-    raw_df_with_partition_cols = raw_df_with_ingested_at.withColumn(
-        "ingested_date", F.to_date("ingested_at")
-    ).withColumn("ingested_hour", F.hour("ingested_at"))
-
     if not spark.catalog.tableExists(gharchive_events_table_name):
         (
-            raw_df_with_partition_cols.writeTo(gharchive_events_table_name)
-            .partitionedBy(
-                F.col("ingested_date"),
-                F.col("ingested_hour"),
-            )
+            raw_df_with_ingested_at.writeTo(gharchive_events_table_name)
             .tableProperty("format-version", "2")
+            .partitionedBy(F.hours("ingested_at"))
             .create()
         )
     else:
         (
-            raw_df_with_partition_cols.writeTo(gharchive_events_table_name)
-            .partitionedBy(
-                F.col("ingested_date"),
-                F.col("ingested_hour"),
-            )
-            .overwritePartitions()
+            raw_df_with_ingested_at.writeTo(
+                gharchive_events_table_name
+            ).overwritePartitions()
         )
 
 

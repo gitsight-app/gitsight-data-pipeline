@@ -22,8 +22,6 @@ INSERT INTO repo_metrics_hourly (
     , star_trend
     , fork_trend
     , is_new
-    , ingested_date
-    , ingested_hour
 )
 SELECT
     repo_name
@@ -40,8 +38,6 @@ SELECT
     , star_trend
     , fork_trend
     , is_new
-    , ingested_date
-    , ingested_hour
 FROM {{ ti.xcom_pull(task_ids='staging_gold_repo_metrics_table') }}
 ON CONFLICT (repo_id, ingested_at)
 DO UPDATE SET
@@ -57,8 +53,6 @@ DO UPDATE SET
     , star_trend      = excluded.star_trend
     , fork_trend      = excluded.fork_trend
     , is_new          = excluded.is_new
-    , ingested_date   = excluded.ingested_date
-    , ingested_hour   = excluded.ingested_hour;
 """
 
 with DAG(
@@ -114,7 +108,7 @@ with DAG(
         ],
         aws_conn_id="aws_default",
         catalog_conn_id="catalog_default",
-        jdbc_conn_id="postgres_default",
+        oltp_conn_id="postgres_default",
     )
 
     merge_staging_repo_metrics_to_prod = SQLExecuteQueryOperator(
