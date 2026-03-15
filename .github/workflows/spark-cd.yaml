@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    path-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '.gitignore'
 
 jobs:
   deploy:
