@@ -92,7 +92,7 @@ graph LR
     end
 %% --- %%
     ACTOR_DETAIL_RAW[(bronze/actor_detail_raw/ingested_at_hour=yyyy-MM-dd-HH)]:::bronze_t
-    ACTOR_DETAIL_SCD[(silver/actor_detail_scd/is_current=true, false /ingested_at_hour=yyyy-MM-dd-HH/)]:::silver_t
+    ACTOR_DETAIL_SCD[(silver/actor_detail_scd/ingested_at_hour=yyyy-MM-dd-HH/is_current=boolean)]:::silver_t
 
     subgraph hourly: update_dim_actor_scd_dag
         UNIFIED_EVENTS --> ACTOR_DETAIL_RAW
@@ -107,7 +107,7 @@ graph LR
     subgraph daily: update_repo_contribution_by_country_day
         ACTOR_MASTER --> EXTRACT_ACTORS
         UNIFIED_EVENTS --> EXTRACT_ACTORS
-        REPO_METRICS_HOURLY --> EXTRACT_ACTORS
+        REPO_METRICS_DAILY --> EXTRACT_ACTORS
         ACTOR_DETAIL_SCD --> EXTRACT_ACTORS
         EXTRACT_ACTORS --> REPO_CONTRIBUTION_METRICS_DAILY
         REPO_CONTRIBUTION_METRICS_DAILY --> OLTP_REPO_CONTRIBUTION_METRICS_DAILY

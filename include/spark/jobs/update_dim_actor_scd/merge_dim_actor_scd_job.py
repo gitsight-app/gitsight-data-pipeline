@@ -9,12 +9,13 @@ from include.spark.utils.arg_parse_utils import parse_required_args
 from include.spark.utils.condition_utils import get_ingested_at_between_condition
 from include.spark.utils.country_utils import (
     SUBDIVISION_TO_COUNTRY,
+    extract_country_alpha_3_udf,
     get_extract_country_udf,
 )
 
 source_actor_detail_raw_table_name = "nessie.gitsight.bronze.actor_detail_raw"
 target_actor_detail_scd_table_name = "nessie.gitsight.silver.actor_detail_scd"
-actor_detail_view_name = "nessie.gitsight.silver.actor_detail_view"
+actor_detail_view_name = "nessie.gitsight.silver.actor_detail"
 
 
 @spark_session_manager
@@ -51,6 +52,10 @@ def merge_dim_actor_detail_scd_job(
 
     processed_df = processed_df.withColumn(
         "country", get_extract_country_udf(subdivision_bc)(F.col("location"))
+    )
+
+    processed_df = processed_df.withColumn(
+        "country_code", extract_country_alpha_3_udf(F.col("country"))
     )
     current_batch_time = F.to_timestamp(F.lit(target_ts))
     max_future_time = F.to_timestamp(F.lit("9999-12-31 23:59:59"))
@@ -147,6 +152,7 @@ def _query_merge_dim_actor_scd(spark: SparkSession, source_name: str, target_nam
                 , user_updated_at
                 , ingested_at
                 , country
+                , country_code
                 , valid_from
                 , valid_to
                 , is_current
@@ -164,6 +170,7 @@ def _query_merge_dim_actor_scd(spark: SparkSession, source_name: str, target_nam
                 , source.user_updated_at
                 , source.ingested_at
                 , source.country
+                , source.country_code
                 , source.valid_from
                 , source.valid_to
                 , true

@@ -52,3 +52,20 @@ def get_extract_country_udf(subdivision_bc: Broadcast[dict]) -> callable:
         return locations.apply(lambda loc: get_country_from_text(loc, sub_dict))
 
     return extract_country_udf
+
+
+@pandas_udf(StringType())
+def extract_country_alpha_3_udf(names: pd.Series) -> pd.Series:
+    unique_names = names.unique()
+
+    mapping = {}
+    for name in unique_names:
+        if not name or name == "Unknown":
+            mapping[name] = "UNKNOWN"
+            continue
+        try:
+            mapping[name] = pycountry.countries.lookup(value=name).alpha_3
+        except:
+            mapping[name] = "UNKNOWN"
+
+    return names.map(mapping)
