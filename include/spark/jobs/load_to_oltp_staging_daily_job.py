@@ -10,17 +10,19 @@ source_gold_repo_metrics_table_name = "nessie.gitsight.gold.repo_metrics_daily"
 
 
 @spark_session_manager
-def load_oltp_gold_repo_metrics_daily_to_staging_job(
+def load_to_oltp_staging_job(
     *,
     spark: SparkSession,
-    target_date,
+    source_table_name,
     staging_table_name,
+    target_date,
+    date_condition_col_name,
     logger,
     **kwargs,
 ):
 
-    source_df = spark.read.table(source_gold_repo_metrics_table_name).where(
-        F.col("created_date") == F.lit(target_date)
+    source_df = spark.read.table(source_table_name).where(
+        F.col(date_condition_col_name) == F.lit(target_date)
     )
 
     jdbc_config = get_jdbc_config(spark.conf)
@@ -33,7 +35,7 @@ def load_oltp_gold_repo_metrics_daily_to_staging_job(
         .option("user", jdbc_config.user)
         .option("password", jdbc_config.password)
         .option("driver", jdbc_config.driver)
-        .option("batchsize", 6000)
+        .option("batchsize", 5000)
         .option("truncate", "true")
         .mode("overwrite")
         .save()
@@ -41,13 +43,20 @@ def load_oltp_gold_repo_metrics_daily_to_staging_job(
 
 
 if __name__ == "__main__":
-    spark_session = SparkSessionFactory.create_session(
-        "MergeToOltpGoldRepoMetricsHourlyJob"
+    spark_session = SparkSessionFactory.create_session("LoadToOltpStagingJob")
+    args = parse_required_args(
+        [
+            "target_date",
+            "target_table_name",
+            "source_table_name",
+            "date_condition_col_name",
+        ]
     )
-    args = parse_required_args(["target_date", "target_table_name"])
 
-    load_oltp_gold_repo_metrics_daily_to_staging_job(
+    load_to_oltp_staging_job(
         spark=spark_session,
         target_date=args.target_date,
         staging_table_name=args.target_table_name,
+        source_table_name=args.source_table_name,
+        date_condition_col_name=args.date_condition_col_name,
     )
