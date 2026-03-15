@@ -32,6 +32,8 @@ _**Datalake**: Medalion Architecture (Bronze, Silver, Gold) 기반으로 설계�
 
 > Github metrics dashboard using [GitArchive](https://www.gharchive.org/)
 
+Data Pipeline Detail Page: https://announcements-luke-office-sperm.trycloudflare.com/pipeline
+
 ```mermaid
 graph LR
     classDef oltp fill: #cfd8dc, stroke: #37474f, stroke-width: 2px, color: #263238, stroke-dasharray: 5 5;
