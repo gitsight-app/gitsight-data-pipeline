@@ -1,6 +1,6 @@
 # Gitsight
 
-https://announcements-luke-office-sperm.trycloudflare.com/
+Service URL: https://announcements-luke-office-sperm.trycloudflare.com/
 
 ## Getting Started
 
@@ -14,10 +14,23 @@ docker compose -f ./docker-compose-local.yaml up -d --build
 
 # About Gitsight
 
+### Software Architecture
+
+<div>
+    <img src="/docs/images/software_architecture.png" alt="Software Architecture"/>
+</div>
+
+- Catalog, Airflow, Spark(Worker, Master)간의 안정적인 통신을 위해  
+  NLB(Network Load Balancer)와 Service Discovery를 활용하여 네트워크 구성을 최적화하였습니다.
+- 데이터 레이크 운영 중 발생할 수 있는 데이터 오염을 차단하고, Nessie Catalog, Iceberg Format을 활용하여,  
+  WAP(Writes, Appends, and Deletes) 작업을 안전하게 처리할 수 있도록 설계하였습니다.
+
+_**Datalake**: Medalion Architecture (Bronze, Silver, Gold) 기반으로 설계하여,  
+데이터의 재사용성과 품질을 단계적으로 향상시킬 수 있도록 구성하였습니다._
+
 ### Data Flow
 
 > Github metrics dashboard using [GitArchive](https://www.gharchive.org/)
-
 
 ```mermaid
 graph LR
