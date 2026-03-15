@@ -3,7 +3,9 @@ from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sdk import DAG
 from operators.common.code_deploy import CodeDeployOperator
 from operators.spark.base.lake import CommonLakeSparkOperator
-from operators.spark.oltp_staging import LakeToOLTPStagingOperator
+from operators.spark.oltp_staging import (
+    LakeToOLTPStagingDailyOperator,
+)
 
 with DAG(
     dag_id="update_repo_metrics_daily",
@@ -42,14 +44,12 @@ with DAG(
         verbose=True,
     )
 
-    load_oltp_gold_repo_metrics_hourly_to_staging = LakeToOLTPStagingOperator(
+    load_oltp_gold_repo_metrics_hourly_to_staging = LakeToOLTPStagingDailyOperator(
         task_id="load_oltp_gold_repo_metrics_hourly_to_staging",
-        application=f"{spark_job_bast_path}/load_oltp_gold_repo_metrics_daily_to_staging_job.py",
+        source_table_name="nessie.gitsight.gold.repo_metrics_daily",
         staging_table_name="repo_metrics_daily_staging",
-        application_args=[
-            "--target_date",
-            "{{ ds }}",
-        ],
+        date_condition_col_name="created_date",
+        target_date="{{ ds }}",
     )
 
     merge_staging_repo_metrics_to_prod = SQLExecuteQueryOperator(
