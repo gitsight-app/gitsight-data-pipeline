@@ -4,7 +4,7 @@ from operators.spark.base.lake import CommonLakeSparkOperator
 from pendulum import datetime
 
 with DAG(
-    dag_id="repo_actor_master_transform",
+    dag_id="repo_actor_master_transform2",
     doc_md="""
     Loads the repository actor master data. to Silver layer.
     This DAG is scheduled to run daily and will process the data for the previous day.

@@ -1,0 +1,17 @@
+FROM apache/airflow:3.1.2-python3.11
+
+USER root
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+USER airflow
+WORKDIR /opt/airflow
+
+COPY --chown=airflow:0 pyproject.toml uv.lock ./
+
+RUN --mount=type=cache,target=/home/airflow/.cache/uv \
+    uv pip install --no-cache-dir -r pyproject.toml
+
+
+COPY --chown=airflow:0 dags /opt/airflow/dags
+COPY --chown=airflow:0 plugins /opt/airflow/plugins
