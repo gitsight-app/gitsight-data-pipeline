@@ -1,0 +1,19 @@
+# helm upgrade postgres bitnami/postgresql -f values.yaml -n postgres
+
+postgresql:
+  auth:
+    existingSecret: "postgres-creds"
+    secretKeys:
+      adminPasswordKey: "postgres-password"
+      userPasswordKey: "postgres-password"
+
+    username: postgres
+    database: postgres
+
+  architecture: standalone
+
+  primary:
+    persistence:
+      enabled: true
+      retain: true
+      existingClaim: postgres-pvc

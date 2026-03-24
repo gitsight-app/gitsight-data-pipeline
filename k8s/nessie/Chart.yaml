@@ -1,0 +1,9 @@
+apiVersion: v2
+name: gitsight-nessie-catalog
+type: application
+version: 1.0.0
+
+dependencies:
+  - name: nessie
+    version: "0.107.4"
+    repository: "https://charts.projectnessie.org"

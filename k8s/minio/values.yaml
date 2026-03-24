@@ -1,0 +1,35 @@
+# helm upgrade --install minio minio/minio -f values.yaml -n minio-system
+minio:
+  mode: standalone
+
+  auth:
+    existingSecret: "minio-creds"
+    userKey: "root-user"
+    passwordKey: "root-password"
+
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 1Gi
+
+  persistence:
+    enabled: true
+    existingClaim: minio-pvc
+    retain: true
+
+  service:
+    type: NodePort
+    nodePort: 30061
+
+  consoleService:
+    type: NodePort
+    nodePort: 30062
+
+  extraEnv:
+    - name: MINIO_BROWSER_REDIRECT_URL
+      valueFrom:
+        secretKeyRef:
+          name: minio-creds
+          key: browser-redirect-url

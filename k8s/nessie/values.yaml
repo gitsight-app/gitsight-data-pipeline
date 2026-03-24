@@ -1,0 +1,48 @@
+# helm upgrade nessie nessie-helm/nessie -n nessie-catalog -f values.yaml
+nessie:
+  versionStoreType: "JDBC"
+
+  replicaCount: 1
+
+  jdbc:
+    jdbcUrl: "jdbc:postgresql://postgres-postgresql.postgres.svc.cluster.local:5432/nessie_catalog"
+    secret:
+      name: "postgres-creds"
+      username: "username"
+      password: "password"
+
+  nessie:
+    extraEnv:
+      - name: NESSIE_SERVER_SERVICE_DISCOVERY_TYPE
+        value: "DNS"
+      - name: NESSIE_SERVER_SERVICE_DISCOVERY_NAME
+        value: "nessie-mgmt.nessie-catalog.svc.cluster.local"
+      - name: NESSIE_SERVER_DIST_CACHE_TYPE
+        value: "NONE"
+
+  managementService:
+    portName: "nessie-mgmt"
+    portNumber: 9000
+
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - nessie
+          topologyKey: "kubernetes.io/hostname"
+
+  service:
+    type: NodePort
+    ports:
+      - name: nessie-http
+        number: 19120
+        nodePort: 31133
+
+  livenessProbe:
+    initialDelaySeconds: 120
+  readinessProbe:
+    initialDelaySeconds: 120

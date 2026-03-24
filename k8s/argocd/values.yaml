@@ -1,0 +1,22 @@
+
+global:
+  nodeSelector:
+    kubernetes.io/hostname: private-1-instance
+
+server:
+  service:
+    type: NodePort
+    servicePortHttp: 80
+    servicePortHttps: 443
+    nodePortHttp: 30080
+    nodePortHttps: 30443
+
+  config:
+    admin.enabled: "true"
+
+controller:
+  replicas: 1
+redis:
+  replicas: 1
+repoServer:
+  replicas: 1

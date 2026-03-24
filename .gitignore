@@ -23,3 +23,6 @@ notebooks
 
 # Virtual environments
 .venv
+
+# k8s
+./k8s/charts/
