@@ -1,0 +1,71 @@
+airflow:
+  images:
+    airflow:
+      repository: 10.43.7.183:5000/gitsight/airflow
+      tag: 1.0.0
+      pullPolicy: IfNotPresent
+  fernetKeySecretName: "gitsight-airflow-fernet-key"
+
+  migrateDatabaseJob:
+    enabled: false
+    useHelmHooks: false
+
+  createUserJob:
+    enabled: false
+    useHelmHooks: false
+
+  postgresql:
+    enabled: false
+  data:
+    metadataSecretName: "airflow-db-connection"
+
+  env:
+    - name: AIRFLOW__CORE__LOAD_EXAMPLES
+      value: "False"
+    - name: AIRFLOW__KUBERNETES__NAMESPACE
+      value: "airflow"
+
+  executor: LocalExecutor
+
+  apiServer:
+    service:
+      type: NodePort
+      ports:
+        - name: api-server
+          port: 8080
+          targetPort: 8080
+          nodePort: 30090
+  dags:
+    persistence:
+      enabled: false
+    gitSync:
+      enabled: true
+      repo: "https://github.com/gitsight-app/gitsight-data-pipeline.git"
+      branch: "migrate-k8s"
+      rev: "HEAD"
+      depth: 1
+      wait: 60
+      subPath: "dags"
+  plugins:
+    gitSync:
+      enabled: true
+
+  extraVolumeMounts:
+    - name: dags-data
+      mountPath: /opt/airflow/include
+      subPath: "repo/include"
+
+  logs:
+    persistence:
+      enabled: false
+
+  statsd:
+    enabled: false
+
+  rbac:
+    create: true
+
+  serviceAccount:
+    create: true
+    name: "airflow-sa"
+    annotations: { }

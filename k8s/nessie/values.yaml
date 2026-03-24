@@ -1,11 +1,11 @@
-# helm upgrade nessie nessie-helm/nessie -n nessie-catalog -f values.yaml
+# helm upgrade nessie nessie-helm/nessie -n nessie-catalog -f values.yaml.yaml
 nessie:
   versionStoreType: "JDBC"
 
   replicaCount: 1
 
   jdbc:
-    jdbcUrl: "jdbc:postgresql://postgres-postgresql.postgres.svc.cluster.local:5432/nessie_catalog"
+    jdbcUrl: "jdbc:postgresql://gitsight-postgres-postgresql.postgres.svc.cluster.local:5432/nessie_catalog"
     secret:
       name: "postgres-creds"
       username: "username"

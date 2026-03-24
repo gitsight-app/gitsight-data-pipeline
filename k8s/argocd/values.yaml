@@ -20,3 +20,17 @@ redis:
   replicas: 1
 repoServer:
   replicas: 1
+
+imageUpdater:
+  enabled: true
+  replicas: 1
+  nodeSelector:
+    kubernetes.io/hostname: private-1-instance
+
+  config:
+    registries:
+      - name: "Gitsight Zot"
+        prefix: "10.43.164.143:5000"
+        api_url: "http://10.43.164.143:5000"
+        ping: yes
+        insecure: yes

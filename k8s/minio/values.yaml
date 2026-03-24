@@ -1,11 +1,10 @@
-# helm upgrade --install minio minio/minio -f values.yaml -n minio-system
+# helm upgrade --install minio minio/minio -f values.yaml.yaml -n minio-system
 minio:
   mode: standalone
 
-  auth:
-    existingSecret: "minio-creds"
-    userKey: "root-user"
-    passwordKey: "root-password"
+  existingSecret: "minio-creds"
+  rootUserKey: "rootUser"
+  rootPasswordKey: "rootPassword"
 
   resources:
     requests:

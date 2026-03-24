@@ -12,7 +12,7 @@ rules:
     verbs: [ "create", "delete", "get", "list", "patch", "update", "watch" ]
   - apiGroups: [ "" ]
     resources: [ "pods", "pods/log" ]
-    verbs: [ "get", "list", "watch" ]
+    verbs: [ "get", "list", "watch", "create", "patch", "delete" ]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -21,16 +21,16 @@ metadata:
   namespace: spark-applications
 subjects:
   - kind: ServiceAccount
-    name: airflow-sa # Must match serviceAccount.name in airflow-values.yaml
+    name: airflow-sa # Must match serviceAccount.name in airflow-values.yaml.yaml
     namespace: airflow
   - kind: ServiceAccount
-    name: airflow-scheduler
+    name: gitsight-airflow-scheduler
     namespace: airflow
   - kind: ServiceAccount
-    name: airflow-triggerer
+    name: gitsight-airflow-triggerer
     namespace: airflow
   - kind: ServiceAccount
-    name: airflow-worker
+    name: gitsight-airflow-airflow-worker
     namespace: airflow
 roleRef:
   kind: Role

@@ -20,9 +20,9 @@ application_file = {
     "spec": {
         "type": "Python",
         "mode": "cluster",
-        "image": SPARK_IMAGE,
+        "image": "{{ var.value.SPARK_IMAGE }}",
         "imagePullPolicy": "IfNotPresent",
-        "mainApplicationFile": "local:///opt/bitnami/spark/include/spark/jobs/sample_spark_job.py",
+        "mainApplicationFile": "https://raw.githubusercontent.com/gitsight-app/gitsight-data-pipeline/migrate-k8s/include/spark/jobs/sample_spark_job.py",
         "sparkVersion": "3.5.1",
         "restartPolicy": {"type": "Never"},
         "sparkConf": {
@@ -32,7 +32,7 @@ application_file = {
             "spark.executorEnv.HADOOP_USER_NAME": "spark",
         },
         "driver": {
-            "image": SPARK_IMAGE,
+            "image": "{{ var.value.SPARK_IMAGE }}",
             "cores": 1,
             "coreLimit": "1200m",
             "memory": "512m",
@@ -45,7 +45,7 @@ application_file = {
             ],
         },
         "executor": {
-            "image": SPARK_IMAGE,
+            "image": "{{ var.value.SPARK_IMAGE }}",
             "cores": 1,
             "instances": 1,
             "memory": "512m",
@@ -70,4 +70,5 @@ with DAG(
     sample_spark_task = SparkKubernetesOperator(
         task_id="sample_spark_task",
         application_file=yaml.safe_dump(application_file),
+        namespace="spark-applications",
     )

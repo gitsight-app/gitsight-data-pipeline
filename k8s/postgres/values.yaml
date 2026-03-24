@@ -1,4 +1,4 @@
-# helm upgrade postgres bitnami/postgresql -f values.yaml -n postgres
+# helm upgrade postgres bitnami/postgresql -f values.yaml.yaml -n postgres
 
 postgresql:
   auth:

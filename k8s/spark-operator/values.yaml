@@ -1,0 +1,21 @@
+spark-operator:
+  spark:
+    jobNamespaces:
+      - spark-applications
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+  webhook:
+    enable: true
+    port: 443
+
+  sparkJobNamespace: "spark-applications"
+
+
+  metrics:
+    enable: true

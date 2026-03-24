@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  namespace: minio-system
+  namespace: minio
   name: minio-pvc
 spec:
   storageClassName: local-path

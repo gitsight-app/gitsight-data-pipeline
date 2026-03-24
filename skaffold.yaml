@@ -35,7 +35,7 @@ deploy:
         repo: https://airflow.apache.org
         namespace: airflow
         valuesFiles:
-          - k8s/airflow/local-values.yaml
+          - ./local-values.yaml
         setValueTemplates:
           images.airflow.repository: "{{.IMAGE_REPO_gitsight_airflow_local}}"
           images.airflow.tag: "{{.IMAGE_TAG_gitsight_airflow_local}}"
