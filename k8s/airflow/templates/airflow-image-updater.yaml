@@ -2,10 +2,10 @@ apiVersion: argocd-image-updater.argoproj.io/v1alpha1
 kind: ImageUpdater
 metadata:
   name: gitsight-airflow-updater
-  namespace: argocd
+  namespace: airflow
 spec:
   applicationRefs:
-    - name: gitsight-airflow
+    - namePattern: gitsight-airflow
       namespace: argocd
 
   images:
