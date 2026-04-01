@@ -20,8 +20,8 @@ jobs:
           proxy_port: 22
           script: |
             cd ~/gitsight-data-pipeline
-            git fetch origin
-            git pull origin main
+            git fetch --prune origin
+            git reset --hard origin/dev
             
             export KUBECONFIG=$HOME/.kube/config
             
