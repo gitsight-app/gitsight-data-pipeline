@@ -20,9 +20,9 @@ application_file = {
     "spec": {
         "type": "Python",
         "mode": "cluster",
-        "image": "{{ var.value.SPARK_IMAGE }}",
+        "image": "{{ var.value.spark_image }}",
         "imagePullPolicy": "IfNotPresent",
-        "mainApplicationFile": "https://raw.githubusercontent.com/gitsight-app/gitsight-data-pipeline/migrate-k8s/include/spark/jobs/sample_spark_job.py",
+        "mainApplicationFile": "{{ var.value.spark_job_prefix }}/include/spark/jobs/sample_spark_job.py",  # noqa: E501
         "sparkVersion": "3.5.1",
         "restartPolicy": {"type": "Never"},
         "sparkConf": {
@@ -32,7 +32,7 @@ application_file = {
             "spark.executorEnv.HADOOP_USER_NAME": "spark",
         },
         "driver": {
-            "image": "{{ var.value.SPARK_IMAGE }}",
+            "image": "{{ var.value.spark_image }}",
             "cores": 1,
             "coreLimit": "1200m",
             "memory": "512m",
@@ -45,7 +45,7 @@ application_file = {
             ],
         },
         "executor": {
-            "image": "{{ var.value.SPARK_IMAGE }}",
+            "image": "{{ var.value.spark_image }}",
             "cores": 1,
             "instances": 1,
             "memory": "512m",
