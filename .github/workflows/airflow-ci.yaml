@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  deploy:
+  airflow-ci:
     runs-on: ubuntu-latest
     steps:
       - name: SSH through Bastion and Deploy
