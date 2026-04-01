@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  deploy:
+  airflow-ci:
     runs-on: ubuntu-latest
     steps:
       - name: SSH through Bastion and Deploy
@@ -25,6 +25,7 @@ jobs:
             git fetch origin
             git pull origin main
             
+            export KUBECONFIG=$HOME/.kube/config
             kubectl delete job gitsight-airflow-ci-job -n zot --ignore-not-found
             kubectl apply -f k8s/ci/airflow-ci.yaml
             
