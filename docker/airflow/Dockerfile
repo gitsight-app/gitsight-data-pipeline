@@ -11,3 +11,7 @@ COPY --chown=airflow:0 pyproject.toml uv.lock ./
 
 RUN --mount=type=cache,target=/home/airflow/.cache/uv \
     uv pip install --no-cache-dir -r pyproject.toml
+
+
+COPY --chown=airflow:0 dags /opt/airflow/dags
+COPY --chown=airflow:0 plugins /opt/airflow/plugins

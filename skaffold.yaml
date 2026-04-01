@@ -1,0 +1,75 @@
+apiVersion: skaffold/v2beta29
+kind: Config
+metadata:
+  name: airflow-spark-local
+build:
+  artifacts:
+    - image: gitsight/airflow-local
+      context: .
+      docker:
+        dockerfile: docker/airflow/Dockerfile
+      sync:
+        manual:
+          - src: "dags/**/*.py"
+            dest: "/opt/airflow/dags"
+            strip: "dags/"
+          - src: "plugins/**/*.py"
+            dest: "/opt/airflow/plugins"
+            strip: "plugins/"
+    - image: gitsight/spark-local
+      context: .
+      docker:
+        dockerfile: docker/spark/Dockerfile
+      sync:
+        manual:
+          - src: "include/**/*"
+            dest: "/opt/spark/include"
+            strip: "include/"
+  local:
+    push: false
+deploy:
+  helm:
+    releases:
+      - name: airflow
+        remoteChart: airflow
+        repo: https://airflow.apache.org
+        namespace: airflow
+        valuesFiles:
+          - ./local-values.yaml
+        setValueTemplates:
+          images.airflow.repository: "{{.IMAGE_REPO_gitsight_airflow_local}}"
+          images.airflow.tag: "{{.IMAGE_TAG_gitsight_airflow_local}}"
+          images.airflow.pullPolicy: Never
+          env[1].value: "{{.IMAGE_NAME_gitsight_spark_local}}"
+        wait: false
+      - name: spark-operator
+        remoteChart: spark-operator/spark-operator
+        namespace: spark
+        setValues:
+          webhook.enable: "true"
+          webhook.port: "443"
+          spark.jobNamespaces: "{spark-applications}"
+
+portForward:
+  - resourceType: service
+    resourceName: airflow-api-server
+    namespace: airflow
+    port: 8080
+    localPort: 8080
+profiles:
+  - name: dev
+    build:
+      local:
+        push: false
+
+
+
+
+
+
+
+
+
+
+
+

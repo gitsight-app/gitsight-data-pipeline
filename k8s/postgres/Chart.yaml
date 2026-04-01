@@ -1,0 +1,9 @@
+apiVersion: v2
+name: gitsight-postgres
+type: application
+version: 1.0.0
+
+dependencies:
+  - name: postgresql
+    version: "18.5.14"
+    repository: "https://charts.bitnami.com/bitnami"

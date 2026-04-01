@@ -1,0 +1,16 @@
+zot:
+  enableUI: true
+  service:
+    type: NodePort
+    clusterIP: "10.43.7.183"
+    port: 5000
+    nodePort: 30050
+
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: "standard"
+
+  http:
+    port: 8080
+    relativeRoot: /

@@ -1,0 +1,32 @@
+name: Gitsight Spark CI
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH through Bastion and Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.TARGET_HOST }}
+          username: ${{ secrets.TARGET_USER }}
+          key: ${{ secrets.OCI_KEY }}
+
+          proxy_host: ${{ secrets.BASTION_HOST }}
+          proxy_username: ${{ secrets.BASTION_USER }}
+          proxy_key: ${{ secrets.OCI_KEY }}
+          proxy_port: 22
+
+          script: |
+            cd ~/gitsight-data-pipeline
+            git fetch origin
+            git pull origin main
+            
+            kubectl delete job gitsight-airflow-ci-job -n zot --ignore-not-found
+            kubectl apply -f k8s/ci/spark-ci.yaml
+            
+            echo "Deployment triggered successfully."
+            kubectl get pods -n zot | grep -E 'gitsight-spark-ci-job'

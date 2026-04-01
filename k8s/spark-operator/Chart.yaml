@@ -1,0 +1,9 @@
+apiVersion: v2
+name: gitsight-postgres
+type: application
+version: 1.0.0
+
+dependencies:
+  - name: spark-operator
+    version: "2.4.0"
+    repository: "https://kubeflow.github.io/spark-operator"
