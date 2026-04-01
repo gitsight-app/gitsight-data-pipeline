@@ -1,3 +1,8 @@
+#  kubectl annotate application gitsight-airflow -n argocd \
+#    argocd-image-updater.argoproj.io/api-server.update-strategy=latest \
+#    --overwrite
+
+# to Debug: kubectl logs -n argocd -l app.kubernetes.io/name=argocd-image-updater -f --tail=20
 apiVersion: argocd-image-updater.argoproj.io/v1alpha1
 kind: ImageUpdater
 metadata:
@@ -6,13 +11,6 @@ metadata:
 spec:
   applicationRefs:
     - namePattern: gitsight-airflow
-      namespace: argocd
-
-  images:
-    - image: 10.43.7.183:5000/gitsight/airflow
-      updateStrategy:
-        name: digest
-      pullPolicy: Always
-
-  writeBack:
+      useAnnotations: true
+  writeBackConfig:
     method: git
