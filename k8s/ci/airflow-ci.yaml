@@ -14,7 +14,7 @@ spec:
         - name: kaniko
           image: gcr.io/kaniko-project/executor:latest
           args:
-            - "--context=git://github.com//gitsight-app/gitsight-data-pipeline.git#refs/heads/main"
+            - "--context=git://github.com//gitsight-app/gitsight-data-pipeline.git#refs/heads/dev"
             - "--dockerfile=docker/airflow/Dockerfile"
             - "--destination=gitsight-zot.zot.svc.cluster.local:5000/gitsight/airflow:latest"
             - "--insecure"

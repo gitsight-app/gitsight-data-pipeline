@@ -14,20 +14,20 @@ jobs:
           host: ${{ secrets.TARGET_HOST }}
           username: ${{ secrets.TARGET_USER }}
           key: ${{ secrets.OCI_KEY }}
-
           proxy_host: ${{ secrets.BASTION_HOST }}
           proxy_username: ${{ secrets.BASTION_USER }}
           proxy_key: ${{ secrets.OCI_KEY }}
           proxy_port: 22
-
           script: |
             cd ~/gitsight-data-pipeline
-            git fetch origin
-            git pull origin main
+            git fetch --prune origin
+            git reset --hard origin/dev
             
             export KUBECONFIG=$HOME/.kube/config
+            
             kubectl delete job gitsight-airflow-ci-job -n zot --ignore-not-found
             kubectl apply -f k8s/ci/airflow-ci.yaml
             
-            echo "Deployment triggered successfully."
+            kubectl wait --for=condition=complete --timeout=900s job/gitsight-airflow-ci-job -n zot || (kubectl logs -n zot -l job-name=gitsight-airflow-ci-job --tail=100 && exit 1)
+            
             kubectl get pods -n zot | grep -E 'gitsight-airflow-ci-job'
