@@ -2,6 +2,12 @@ name: Gitsight Spark CI
 
 on:
   pull_request:
+    paths:
+        - "k8s/ci/spark-ci.yaml"
+        - "docker/spark/**"
+        - "build.gradle"
+        - "pyproject.toml"
+        - "uv.lock"
     branches: [ "main" ]
 
 jobs:
