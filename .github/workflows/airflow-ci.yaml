@@ -3,11 +3,10 @@ name: Gitsight Airflow CI
 on:
   pull_request:
     paths:
-        - "k8s/airflow/**"
-        - "k8s/ci/airflow-ci.yaml"
-        - "docker/airflow/**"
-        - "pyproject.toml"
-        - "uv.lock"
+      - "k8s/ci/airflow-ci.yaml"
+      - "docker/airflow/**"
+      - "pyproject.toml"
+      - "uv.lock"
     branches: [ "main" ]
 
 jobs:
