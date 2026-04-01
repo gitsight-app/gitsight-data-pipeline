@@ -7,11 +7,10 @@ spec:
   application:
     name: gitsight-airflow
     namespace: argocd
-
   images:
-    - name: 10.43.7.183:5000/gitsight/airflow
-      updateStrategy: digest
+    - image: 10.43.7.183:5000/gitsight/airflow
+      updateStrategy:
+        name: digest
       pullPolicy: Always
-
   writeBack:
     method: git
