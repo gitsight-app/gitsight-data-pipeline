@@ -4,13 +4,15 @@ metadata:
   name: gitsight-airflow-updater
   namespace: argocd
 spec:
-  application:
-    name: gitsight-airflow
-    namespace: argocd
+  applicationRefs:
+    - name: gitsight-airflow
+      namespace: argocd
+
   images:
     - image: 10.43.7.183:5000/gitsight/airflow
       updateStrategy:
         name: digest
       pullPolicy: Always
+
   writeBack:
     method: git
