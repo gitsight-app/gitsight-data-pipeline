@@ -2,8 +2,8 @@ airflow:
   images:
     airflow:
       repository: 10.43.7.183:5000/gitsight/airflow
-      tag: 1.0.0
-      pullPolicy: IfNotPresent
+      tag: latest
+      pullPolicy: Always
   fernetKeySecretName: "gitsight-airflow-fernet-key"
 
   migrateDatabaseJob:
@@ -41,7 +41,7 @@ airflow:
     gitSync:
       enabled: true
       repo: "https://github.com/gitsight-app/gitsight-data-pipeline.git"
-      branch: "migrate-k8s"
+      branch: "main"
       rev: "HEAD"
       depth: 1
       wait: 60
