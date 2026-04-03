@@ -69,7 +69,12 @@ jobs:
       - name: Update AIRFLOW_VAR_SPARK_IMAGE in values
         id: update_values
         run: |
-          /usr/local/bin/yq_mikefarah eval -i '(.airflow.env //= []) | if ([.airflow.env[]? | select(.name == "AIRFLOW_VAR_SPARK_IMAGE")] | length) > 0 then (.airflow.env[] | select(.name == "AIRFLOW_VAR_SPARK_IMAGE") | .value) = strenv(SPARK_IMAGE) else .airflow.env += [{"name":"AIRFLOW_VAR_SPARK_IMAGE","value":strenv(SPARK_IMAGE)}] end' "${VALUES_FILE}"
+          /usr/local/bin/yq_mikefarah eval -i '.airflow.env //= []' "${VALUES_FILE}"
+          if /usr/local/bin/yq_mikefarah eval '.airflow.env[] | select(.name == "AIRFLOW_VAR_SPARK_IMAGE") | .name' "${VALUES_FILE}" | grep -q "AIRFLOW_VAR_SPARK_IMAGE"; then
+            /usr/local/bin/yq_mikefarah eval -i '(.airflow.env[] | select(.name == "AIRFLOW_VAR_SPARK_IMAGE") | .value) = strenv(SPARK_IMAGE)' "${VALUES_FILE}"
+          else
+            /usr/local/bin/yq_mikefarah eval -i '.airflow.env += [{"name":"AIRFLOW_VAR_SPARK_IMAGE","value":strenv(SPARK_IMAGE)}]' "${VALUES_FILE}"
+          fi
 
           if git diff --quiet -- "${VALUES_FILE}"; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
