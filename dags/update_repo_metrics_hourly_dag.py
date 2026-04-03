@@ -1,10 +1,10 @@
 import pendulum
+from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import (
+    SparkKubernetesOperator,
+)
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.standard.sensors.external_task import ExternalTaskSensor
 from airflow.sdk import DAG
-from operators.common.code_deploy import CodeDeployOperator
-from operators.spark.base.lake import CommonLakeSparkOperator
-from operators.spark.oltp_staging import LakeToOLTPStagingOperator
 
 UPSERT_QUERY = """
 INSERT INTO repo_metrics_hourly (
@@ -60,6 +60,7 @@ with DAG(
     schedule="20 * * * *",
     start_date=pendulum.datetime(2026, 1, 1),
     catchup=False,
+    template_searchpath=["/opt/airflow/include"],
 ) as dag:
     spark_job_base_path = "/opt/airflow/include/spark/jobs/update_repo_metrics_hourly"
 
@@ -72,43 +73,19 @@ with DAG(
         timeout=60 * 60,
     )
 
-    deploy_spark_code = CodeDeployOperator(
-        task_id="deploy_spark_code",
-        folder_path="/opt/airflow/include",
-        s3_bucket="gitsight",
-        s3_key="artifacts/builds/dev/include.zip",
-        aws_conn_id="aws_default",
-    )
-
-    update_gold_repo_metrics_table = CommonLakeSparkOperator(
+    update_gold_repo_metrics_table = SparkKubernetesOperator(
         task_id="update_gold_repo_metrics_table",
-        py_files="{{ ti.xcom_pull(task_ids='deploy_spark_code') }}",
-        application=f"{spark_job_base_path}/update_gold_repo_metrics_hourly_job.py",
-        application_args=[
-            "--data_interval_start",
-            "{{ data_interval_start }}",
-            "--data_interval_end",
-            "{{ data_interval_end }}",
-        ],
-        executor_memory="2g",
-        aws_conn_id="aws_default",
-        catalog_conn_id="catalog_default",
-        verbose=True,
+        application_file="spark/jobs/update_repo_metrics_hourly/update_gold_repo_metrics_hourly/application.yaml",
+        namespace="spark_applications",
     )
 
-    staging_gold_repo_metrics_table = LakeToOLTPStagingOperator(
+    staging_gold_repo_metrics_table = SparkKubernetesOperator(
         task_id="staging_gold_repo_metrics_table",
-        application=f"{spark_job_base_path}/load_oltp_gold_repo_metrics_hourly_to_staging_job.py",
-        staging_table_name="repo_metrics_hourly_staging",
-        application_args=[
-            "--data_interval_start",
-            "{{ data_interval_start }}",
-            "--data_interval_end",
-            "{{ data_interval_end }}",
-        ],
-        aws_conn_id="aws_default",
-        catalog_conn_id="catalog_default",
-        oltp_conn_id="postgres_default",
+        application_file="spark/jobs/update_repo_metrics_hourly/load_oltp_gold_repo_metrics_hourly_to_staging/application.yaml",
+        params={
+            "staging_table_name": "repo_metrics_hourly_staging",
+        },
+        namespace="spark_applications",
     )
 
     merge_staging_repo_metrics_to_prod = SQLExecuteQueryOperator(
@@ -126,7 +103,6 @@ with DAG(
 
     (
         wait_for_silver_events
-        >> deploy_spark_code
         >> update_gold_repo_metrics_table
         >> staging_gold_repo_metrics_table
         >> merge_staging_repo_metrics_to_prod

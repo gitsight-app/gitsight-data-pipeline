@@ -15,3 +15,5 @@ RUN --mount=type=cache,target=/home/airflow/.cache/uv \
 
 COPY --chown=airflow:0 dags /opt/airflow/dags
 COPY --chown=airflow:0 plugins /opt/airflow/plugins
+COPY --chown=airflow:0 include /opt/airflow/include
+

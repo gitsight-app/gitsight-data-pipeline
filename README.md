@@ -9,7 +9,11 @@ Service URL: https://announcements-luke-office-sperm.trycloudflare.com/
 _Check the Airflow Connections Section below and set up the necessary connections in your Airflow instance_
 
 ```shell
-docker compose -f ./docker-compose-local.yaml up -d --build
+kubectl create ns airflow
+kubectl create ns spark
+kubectl create ns spark-applications
+
+skaffold dev --port-forward --cleanup=False
 ```
 
 # About Gitsight
