@@ -8,7 +8,7 @@ spec:
   type: Python
   mode: cluster
   image: "{{ var.value.SPARK_IMAGE }}"
-  imagePullPolicy: IfNotPresent
+  imagePullPolicy: Always
   mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/update_dim_actor_scd/merge_dim_actor_scd/job.py"
   sparkVersion: 3.5.1
 
