@@ -27,6 +27,6 @@ RUN useradd -u 1001 -g 0 -M -d /opt/bitnami/spark spark || true \
 
 USER 1001
 
-COPY --chown=spark:0 include /opt/bitnami/spark/include/
-
 WORKDIR /opt/bitnami/spark
+
+COPY --chown=1001:0 include /opt/bitnami/spark/include

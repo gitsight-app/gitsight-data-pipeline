@@ -1,8 +1,9 @@
+from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import (
+    SparkKubernetesOperator,
+)
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sdk import DAG
 from operators.common.code_deploy import CodeDeployOperator
-from operators.spark.base.lake import CommonLakeSparkOperator
-from operators.spark.oltp_staging import LakeToOLTPStagingDailyOperator
 from pendulum import datetime
 
 with DAG(
@@ -10,10 +11,8 @@ with DAG(
     start_date=datetime(2026, 1, 1),
     schedule="10 0 * * *",
     catchup=False,
+    template_searchpath=["/opt/airflow/include"],
 ) as dag:
-    spark_job_base_path = (
-        "/opt/airflow/include/spark/jobs/update_repo_contribution_metrics_daily"
-    )
     py_file_xcom = "{{ ti.xcom_pull(task_ids='deploy_spark_code') }}"
 
     deploy_spark_code = CodeDeployOperator(
@@ -24,26 +23,20 @@ with DAG(
         aws_conn_id="aws_default",
     )
 
-    update_gold_repo_metrics = CommonLakeSparkOperator(
+    update_gold_repo_metrics = SparkKubernetesOperator(
         task_id="update_gold_repo_metrics",
-        application=f"{spark_job_base_path}/update_gold_repo_contribution_metrics_daily_job.py",
-        py_files=py_file_xcom,
-        application_args=[
-            "--data_interval_start",
-            "{{ data_interval_start }}",
-            "--data_interval_end",
-            "{{ data_interval_end }}",
-        ],
-        aws_conn_id="aws_default",
-        catalog_conn_id="catalog_default",
+        application_file="spark/jobs/update_repo_contribution_metrics_daily/application.yaml",
+        namespace="spark-applications",
     )
 
-    staging_gold_repo_metrics = LakeToOLTPStagingDailyOperator(
+    staging_gold_repo_metrics = SparkKubernetesOperator(
         task_id="staging_gold_repo_metrics",
-        source_table_name="nessie.gitsight.gold.repo_contribution_metrics_daily",
-        staging_table_name="repo_contribution_metrics_daily_staging",
-        date_condition_col_name="created_date",
-        target_date="{{ ds }}",
+        application_file="spark/jobs/load_to_oltp_staging_daily/application.yaml",
+        params={
+            "source_table_name": "nessie.gitsight.gold.repo_contribution_metrics_daily",
+            "staging_table_name": "repo_contribution_metrics_daily_staging",
+            "date_condition_col_name": "created_date",
+        },
     )
 
     merge_staging_repo_metrics_to_prod = SQLExecuteQueryOperator(

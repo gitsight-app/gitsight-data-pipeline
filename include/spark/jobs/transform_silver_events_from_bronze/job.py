@@ -1,0 +1,99 @@
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+
+from include.spark.common.session_factory import SparkSessionFactory
+from include.spark.utils.arg_parse_utils import parse_required_args
+from include.spark.utils.condition_utils import get_ingested_at_between_condition
+from include.spark.utils.logger_utils import get_logger
+from include.spark.utils.time_utils import to_timestamp
+
+bronze_gharchive_events_table_name = "nessie.gitsight.bronze.gharchive_events"
+
+
+def transform_silver_events_from_bronze_job(
+    spark: SparkSession,
+    data_interval_start,
+    data_interval_end,
+    event_type,
+    target_table,
+    logger,
+):
+    """
+    Extract Events
+    from bronze gharchive events table,
+
+    Node:
+        - Partition overwrite By ingested_date and ingested_hour
+        - Sliding Window Recompute (2 hours) 11:00-12:00 then window(09:00-12:00)
+    :param target_table: nessie.gitsight.silver.watch_events
+    :param event_type: WATCH, FORK, etc
+    :param spark: Spark session
+    :param data_interval_start: 2026-03-03 11:00:00
+    :param data_interval_end: 2026-03-03 12:00:00
+    :param logger: injected from decorator (spark_session_manager)
+    :param kwargs:
+    :return:
+    """  # noqa: E501
+    start_ts = to_timestamp(data_interval_start).subtract(hours=2)
+    end_ts = to_timestamp(data_interval_end)
+
+    logger.info(f"Transform {event_type} Table Between {start_ts} and {end_ts}")
+
+    has_identify_ids = F.col("repo.id").isNotNull() & F.col("actor.id").isNotNull()
+    type_eq_fork_event = F.col("type") == F.lit(event_type)
+
+    not_bot_user = ~F.col("actor.login").endswith("[bot]")
+
+    source_df = spark.read.table(bronze_gharchive_events_table_name).filter(
+        has_identify_ids
+        & get_ingested_at_between_condition(start_ts, end_ts)
+        & type_eq_fork_event
+        & not_bot_user
+    )
+
+    source_df = source_df.withColumn(
+        "action", F.get_json_object("payload_raw", "$.action")
+    )
+
+    result_df = source_df.select(
+        F.col("id").alias("event_id"),
+        F.col("repo.id").alias("repo_id"),
+        F.col("actor.id").alias("actor_id"),
+        F.col("type").alias("event_type"),
+        F.col("action"),
+        F.col("created_at"),
+        F.col("ingested_at"),
+    )
+
+    if not spark.catalog.tableExists(target_table):
+        (
+            result_df.writeTo(target_table)
+            .tableProperty("format-version", "2")
+            .partitionedBy(F.hours("ingested_at"))
+            .createOrReplace()
+        )
+    else:
+        (
+            result_df.writeTo(target_table)
+            .option("mergeSchema", "true")
+            .overwritePartitions()
+        )
+
+
+if __name__ == "__main__":
+    spark_session = SparkSessionFactory.create_session(
+        "ExtractWatchEventsFromBronzeJob"
+    )
+
+    args = parse_required_args(
+        ["data_interval_start", "data_interval_end", "event_type", "target_table"]
+    )
+
+    transform_silver_events_from_bronze_job(
+        spark=spark_session,
+        data_interval_start=args.data_interval_start,
+        data_interval_end=args.data_interval_end,
+        event_type=args.event_type,
+        target_table=args.target_table,
+        logger=get_logger("ExtractWatchEventsFromBronzeJob"),
+    )

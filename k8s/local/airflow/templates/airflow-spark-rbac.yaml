@@ -1,0 +1,45 @@
+# k8s RBAC (ns: airflow -> spark-applications)
+# Related SA: (airflow-sa, airflow-scheduler, airflow-triggerer, airflow-worker)
+# Role: airflow-spark-editor
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: spark-applications
+  name: airflow-spark-editor
+rules:
+  - apiGroups: [ "sparkoperator.k8s.io" ]
+    resources: [ "sparkapplications", "sparkapplications/status" ]
+    verbs: [ "create", "delete", "get", "list", "patch", "update", "watch" ]
+  - apiGroups: [ "" ]
+    resources: [ "pods", "pods/log" ]
+    verbs: [ "get", "list", "watch", "create", "patch", "delete" ]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: airflow-spark-editor-binding
+  namespace: spark-applications
+subjects:
+  - kind: ServiceAccount
+    name: {{ printf "%s-scheduler" .Release.Name }}
+    namespace: airflow
+  - kind: ServiceAccount
+    name: {{ printf "%s-dag-processor" .Release.Name }}
+    namespace: airflow
+  - kind: ServiceAccount
+    name: {{ printf "%s-triggerer" .Release.Name }}
+    namespace: airflow
+  - kind: ServiceAccount
+    name: {{ printf "%s-api-server" .Release.Name }}
+    namespace: airflow
+  - kind: ServiceAccount
+    name: {{ printf "%s-worker" .Release.Name }}
+    namespace: airflow
+  - kind: ServiceAccount
+    name: {{ printf "%s-airflow-worker" .Release.Name }}
+    namespace: airflow
+roleRef:
+  kind: Role
+  name: airflow-spark-editor
+  apiGroup: rbac.authorization.k8s.io
+

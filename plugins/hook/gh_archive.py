@@ -37,7 +37,7 @@ class GHArchiveHook(S3Hook):
         response = self.session.get(url, stream=True, timeout=self.timeout)
 
         if response.status_code in (400, 404):
-            self.log.info("status: ", response.status_code)
+            self.log.info("status: %s", response.status_code)
             raise AirflowSkipException(f"File not found: {url}")
 
         response.raise_for_status()

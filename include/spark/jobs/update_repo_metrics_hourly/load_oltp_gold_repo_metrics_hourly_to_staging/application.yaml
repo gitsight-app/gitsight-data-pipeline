@@ -1,0 +1,74 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: "{{ task.task_id | replace('_', '-') }}-{{ ts_nodash | lower }}"
+  namespace: spark-applications
+
+spec:
+  type: Python
+  mode: cluster
+  image: "{{ var.value.SPARK_IMAGE }}"
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/update_repo_metrics_hourly/load_oltp_gold_repo_metrics_hourly_to_staging/job.py"
+  sparkVersion: 3.5.1
+
+  restartPolicy:
+    type: Never
+
+  arguments:
+    - "--staging_table_name",
+    - "{{ params.staging_table_name }}",
+    - "--data_interval_start",
+    - "{{ data_interval_start }}",
+    - "--data_interval_end",
+    - "{{ data_interval_end }}"
+
+
+  sparkConf:
+    spark.driver.extraJavaOptions: "-Duser.name=spark"
+    spark.executor.extraJavaOptions: "-Duser.name=spark"
+    "spark.hadoop.fs.s3a.access.key": "{{ conn.aws_default.login }}"
+    "spark.hadoop.fs.s3a.secret.key": "{{ conn.aws_default.password }}"
+    "spark.hadoop.fs.s3a.endpoint": "{{ conn.aws_default.extra_dejson.get('endpoint_url', 's3.ap-northeast-2.amazonaws.com') }}"
+    "spark.hadoop.fs.s3a.connection.ssl.enabled": "false"
+
+    "spark.sql.catalog.nessie": "org.apache.iceberg.spark.SparkCatalog"
+    "spark.sql.catalog.nessie.catalog-impl": "org.apache.iceberg.nessie.NessieCatalog"
+    {% set nessie_extra = conn.nessie_default.extra_dejson %}
+    "spark.sql.catalog.nessie.uri": "{{ nessie_extra.get('uri', 'http://localhost:19120/api/v1') }}"
+    "spark.sql.catalog.nessie.ref": "{{ nessie_extra.get('ref', 'main') }}"
+    "spark.sql.catalog.nessie.warehouse": "{{ nessie_extra.get('warehouse') }}"
+
+  driver:
+    image: "{{ var.value.SPARK_IMAGE }}"
+    cores: 1
+    coreLimit: "1200m"
+    memory: "512m"
+    serviceAccount: airflow-spark
+    labels:
+      version: "3.5.1"
+    env:
+      - name: HADOOP_USER_NAME
+        value: spark
+      - name: USER
+        value: spark
+      - name: LOGNAME
+        value: spark
+      - name: PYTHONPATH
+        value: "/opt/bitnami/spark:/opt/bitnami/spark/include"
+
+  executor:
+    image: "{{ var.value.SPARK_IMAGE }}"
+    cores: 1
+    instances: 1
+    memory: "512m"
+    serviceAccount: airflow-spark
+    labels:
+      version: "3.5.1"
+    env:
+      - name: HADOOP_USER_NAME
+        value: spark
+      - name: USER
+        value: spark
+      - name: LOGNAME
+        value: spark
