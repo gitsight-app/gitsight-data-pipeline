@@ -1,11 +1,20 @@
+from enum import EnumType
+
+from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import (
+    SparkKubernetesOperator,
+)
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import DAG, TaskGroup
-from operators.common.code_deploy import CodeDeployOperator
-from operators.spark.transform_silver_event import (
-    EventType,
-    TransformSilverEventOperator,
-)
 from pendulum import datetime
+
+
+class EventType(EnumType):
+    WATCH = "WatchEvent"
+    FORK = "ForkEvent"
+    PULL_REQUEST = "PullRequestEvent"
+    PUSH = "PushEvent"
+    ISSUES = "IssuesEvent"
+
 
 target_events = [
     {
@@ -39,30 +48,22 @@ with DAG(
     schedule="20 * * * *",
     max_active_tasks=1,
     catchup=False,
+    template_searchpath=["/opt/airflow/include"],
 ) as dag:
-    deploy_spark_code = CodeDeployOperator(
-        task_id="deploy_spark_code",
-        folder_path="/opt/airflow/include",
-        s3_bucket="gitsight",
-        s3_key="artifacts/builds/dev/include.zip",
-        aws_conn_id="aws_default",
-    )
-
-    with TaskGroup(group_id="transform_events") as transform_events:
+    with TaskGroup(group_id="transform_events") as transform_events_group:
         for event in target_events:
             task_id = f"transform_silver_{event['event_type']}_from_bronze"
-            TransformSilverEventOperator(
+            SparkKubernetesOperator(
                 task_id=task_id,
-                py_files="{{ ti.xcom_pull(task_ids='deploy_spark_code') }}",
-                executor_memory="1g",
-                aws_conn_id="aws_default",
-                event_type=event["event_type"],
-                target_table=event["target_table"],
-                catalog_conn_id="catalog_default",
-                verbose=True,
+                application_file="spark/jobs/transform_silver_events_from_bronze/application.yaml",
+                namespace="spark-applications",
+                params={
+                    "event_type": event["event_type"],
+                    "target_table": event["target_table"],
+                },
             )
 
     end_events_transform = EmptyOperator(
         task_id="end_events_transform",
     )
-    deploy_spark_code >> transform_events >> end_events_transform
+    transform_events_group >> end_events_transform

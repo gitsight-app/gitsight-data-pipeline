@@ -1,9 +1,9 @@
+from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import (
+    SparkKubernetesOperator,
+)
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import DAG
 from hook.gh_archive import GHArchiveHook
-from operators.common.code_deploy import CodeDeployOperator
-from operators.spark.base.lake import CommonLakeSparkOperator
-from operators.spark.extract_meta import ExtractMetaOperator
 from pendulum import datetime
 
 
@@ -23,15 +23,9 @@ with DAG(
     start_date=datetime(2026, 1, 1),
     schedule="10 * * * *",
     catchup=False,
+    template_searchpath=["/opt/airflow/include"],
 ) as dag:
     spark_job_base_path = "/opt/airflow/include/spark/jobs/gharchive_events_ingest"
-    deploy_spark_code = CodeDeployOperator(
-        task_id="deploy_spark_code",
-        folder_path="/opt/airflow/include",
-        s3_bucket="gitsight",
-        s3_key="artifacts/builds/dev/include.zip",
-        aws_conn_id="aws_default",
-    )
 
     save_gharchive_to_s3 = PythonOperator(
         task_id="save_gharchive_to_s3",
@@ -42,39 +36,26 @@ with DAG(
         },
     )
 
-    extract_gharchive_event_to_bronze = CommonLakeSparkOperator(
-        task_id="extract_gharchive_event_to_bronze",
-        py_files="{{ ti.xcom_pull(task_ids='deploy_spark_code') }}",
-        application=f"{spark_job_base_path}/extract_gharchive_events_to_bronze_job.py",
-        application_args=[
-            "--source_path",
-            "{{ ti.xcom_pull(task_ids='save_gharchive_to_s3') }}",
-            "--data_interval_start",
-            "{{ data_interval_start }}",
-        ],
-        executor_memory="1g",
-        aws_conn_id="aws_default",
-        catalog_conn_id="catalog_default",
-        verbose=True,
+    extract_gharchive_events_to_bronze = SparkKubernetesOperator(
+        task_id="extract_gharchive_events_to_bronze",
+        application_file="spark/jobs/gharchive_events_ingest/extract_gharchive_events_to_bronze/application.yaml",
+        namespace="spark-applications",
     )
 
-    extract_actor_meta_from_bronze_events = ExtractMetaOperator(
+    extract_actor_meta_from_bronze_events = SparkKubernetesOperator(
         task_id="extract_actor_meta_from_bronze_events",
-        py_files="{{ ti.xcom_pull(task_ids='deploy_spark_code') }}",
-        application=f"{spark_job_base_path}/extract_actor_meta_from_bronze_events_job.py",
-        verbose=True,
+        application_file="spark/jobs/gharchive_events_ingest/extract_actor_meta_from_bronze_events/application.yaml",
+        namespace="spark-applications",
     )
 
-    extract_repo_meta_from_bronze_events = ExtractMetaOperator(
+    extract_repo_meta_from_bronze_events = SparkKubernetesOperator(
         task_id="extract_repo_meta_from_bronze_events",
-        py_files="{{ ti.xcom_pull(task_ids='deploy_spark_code') }}",
-        application=f"{spark_job_base_path}/extract_repo_meta_from_bronze_events_job.py",
-        verbose=True,
+        application_file="spark/jobs/gharchive_events_ingest/extract_repo_meta_from_bronze_events/application.yaml",
+        namespace="spark-applications",
     )
 
     (
-        deploy_spark_code
-        >> save_gharchive_to_s3
-        >> extract_gharchive_event_to_bronze
+        save_gharchive_to_s3
+        >> extract_gharchive_events_to_bronze
         >> [extract_actor_meta_from_bronze_events, extract_repo_meta_from_bronze_events]
     )

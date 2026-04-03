@@ -12,6 +12,7 @@
       <excludeFolder url="file://$MODULE_DIR$/notebooks/data" />
       <excludeFolder url="file://$MODULE_DIR$/docs" />
       <excludeFolder url="file://$MODULE_DIR$/notebooks/great_expectations" />
+      <excludeFolder url="file://$MODULE_DIR$/k8s/local/airflow/charts" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
