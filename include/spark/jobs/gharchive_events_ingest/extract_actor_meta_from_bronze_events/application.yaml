@@ -52,7 +52,7 @@ spec:
       - name: LOGNAME
         value: spark
       - name: PYTHONPATH
-        value: "/opt/bitnami/spark:/opt/bitnami/spark/include"
+        value: "/opt/bitnami/spark"
 
   executor:
     image: "{{ var.value.SPARK_IMAGE }}"
