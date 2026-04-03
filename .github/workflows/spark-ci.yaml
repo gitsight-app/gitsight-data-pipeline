@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
         - "k8s/ci/spark-ci.yaml"
+        - "include/**"
         - "docker/spark/**"
         - "build.gradle"
         - "pyproject.toml"
