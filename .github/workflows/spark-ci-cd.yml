@@ -60,17 +60,16 @@ jobs:
             kubectl wait --for=condition=complete --timeout=900s job/gitsight-spark-ci-job -n zot || (kubectl logs -n zot -l job-name=gitsight-spark-ci-job --tail=200 && exit 1)
             rm -f "${tmp_file}"
 
-      - name: Install yq
+      - name: Install mikefarah yq
         run: |
-          if ! command -v yq >/dev/null 2>&1; then
-            sudo wget -qO /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64"
-            sudo chmod +x /usr/local/bin/yq
-          fi
+          sudo wget -qO /usr/local/bin/yq_mikefarah "https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64"
+          sudo chmod +x /usr/local/bin/yq_mikefarah
+          /usr/local/bin/yq_mikefarah --version
 
       - name: Update AIRFLOW_VAR_SPARK_IMAGE in values
         id: update_values
         run: |
-          yq eval -i '(.airflow.env //= []) | if ([.airflow.env[]? | select(.name == "AIRFLOW_VAR_SPARK_IMAGE")] | length) > 0 then (.airflow.env[] | select(.name == "AIRFLOW_VAR_SPARK_IMAGE") | .value) = strenv(SPARK_IMAGE) else .airflow.env += [{"name":"AIRFLOW_VAR_SPARK_IMAGE","value":strenv(SPARK_IMAGE)}] end' "${VALUES_FILE}"
+          /usr/local/bin/yq_mikefarah eval -i '(.airflow.env //= []) | if ([.airflow.env[]? | select(.name == "AIRFLOW_VAR_SPARK_IMAGE")] | length) > 0 then (.airflow.env[] | select(.name == "AIRFLOW_VAR_SPARK_IMAGE") | .value) = strenv(SPARK_IMAGE) else .airflow.env += [{"name":"AIRFLOW_VAR_SPARK_IMAGE","value":strenv(SPARK_IMAGE)}] end' "${VALUES_FILE}"
 
           if git diff --quiet -- "${VALUES_FILE}"; then
             echo "changed=false" >> "$GITHUB_OUTPUT"

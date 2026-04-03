@@ -52,7 +52,6 @@ if __name__ == "__main__":
         "ExtractRepoMetaFromBronzeEventsJob"
     )
     args = parse_required_args(["data_interval_start", "data_interval_end"])
-
     logger = logging.getLogger(__file__)
 
     extract_repo_meta_from_bronze_events_job(
