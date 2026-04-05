@@ -1,8 +1,10 @@
+import pendulum
 from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import (
     SparkKubernetesOperator,
 )
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.sdk import DAG
+from airflow.timetables.interval import CronDataIntervalTimetable
 from hook.gh_archive import GHArchiveHook
 from pendulum import datetime
 
@@ -20,8 +22,8 @@ with DAG(
     - Ingest Gharchive data from https://www.gharchive.org/
     - extract actor and repo meta from gharchive events in bronze layer
     """,
-    start_date=datetime(2026, 1, 1),
-    schedule="10 * * * *",
+    start_date=pendulum.datetime(2026, 1, 1),
+    schedule=CronDataIntervalTimetable("10 * * * *", timezone=pendulum.UTC),
     catchup=False,
     template_searchpath=["/opt/airflow/include"],
 ) as dag:

@@ -5,6 +5,7 @@ from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import (
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.standard.sensors.external_task import ExternalTaskSensor
 from airflow.sdk import DAG
+from airflow.timetables.interval import CronDataIntervalTimetable
 
 UPSERT_QUERY = """
 INSERT INTO repo_metrics_hourly (
@@ -57,7 +58,7 @@ DO UPDATE SET
 
 with DAG(
     dag_id="update_repo_metrics_hourly",
-    schedule="20 * * * *",
+    schedule=CronDataIntervalTimetable("20 * * * *", timezone=pendulum.UTC),
     start_date=pendulum.datetime(2026, 1, 1),
     catchup=False,
     template_searchpath=["/opt/airflow/include"],

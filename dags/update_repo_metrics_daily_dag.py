@@ -4,6 +4,7 @@ from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import (
 )
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sdk import DAG
+from airflow.timetables.interval import CronDataIntervalTimetable
 
 with DAG(
     dag_id="update_repo_metrics_daily",
@@ -12,7 +13,7 @@ with DAG(
     - This DAG is scheduled to run daily and will process the data for the previous day.
     """,
     start_date=pendulum.datetime(2026, 1, 1),
-    schedule="@daily",
+    schedule=CronDataIntervalTimetable("@daily", timezone=pendulum.UTC),
     template_searchpath=["/opt/airflow/include"],
     catchup=False,
 ) as dag:
