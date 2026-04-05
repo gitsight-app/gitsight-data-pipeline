@@ -1,7 +1,9 @@
+import pendulum
 from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import (
     SparkKubernetesOperator,
 )
 from airflow.sdk import DAG
+from airflow.timetables.interval import CronDataIntervalTimetable
 from pendulum import datetime
 
 with DAG(
@@ -11,7 +13,7 @@ with DAG(
     This DAG is scheduled to run daily and will process the data for the previous day.
     """,
     start_date=datetime(2026, 1, 1),
-    schedule="15 * * * *",
+    schedule=CronDataIntervalTimetable("15 * * * *", timezone=pendulum.UTC),
     template_searchpath=["/opt/airflow/include"],
     catchup=False,
 ) as dag:

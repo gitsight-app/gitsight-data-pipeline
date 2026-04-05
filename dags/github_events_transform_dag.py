@@ -1,10 +1,12 @@
 from enum import EnumType
 
+import pendulum
 from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import (
     SparkKubernetesOperator,
 )
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import DAG, TaskGroup
+from airflow.timetables.interval import CronDataIntervalTimetable
 from pendulum import datetime
 
 
@@ -45,7 +47,7 @@ with DAG(
     Transform github events data in silver layer from bronze gharchive events table
     """,
     start_date=datetime(2026, 1, 1),
-    schedule="20 * * * *",
+    schedule=CronDataIntervalTimetable("20 * * * *", timezone=pendulum.UTC),
     max_active_tasks=1,
     catchup=False,
     template_searchpath=["/opt/airflow/include"],
