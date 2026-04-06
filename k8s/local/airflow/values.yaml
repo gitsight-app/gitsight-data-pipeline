@@ -15,13 +15,7 @@ airflow:
     persistence:
       enabled: false
     gitSync:
-      enabled: true
-      repo: "https://github.com/gitsight-app/gitsight-data-pipeline.git"
-      branch: "main"
-      subPath: "dags"
-      depth: 1
-      wait: 60
-      uid: 65533
+      enabled: false
 
   logs:
     persistence:
@@ -40,14 +34,7 @@ airflow:
 
 
   triggerer:
-    enabled: true
-    extraVolumeMounts:
-      - name: dags
-        mountPath: /opt/airflow/plugins
-        subPath: repo/plugins
-      - name: dags
-        mountPath: /opt/airflow/include
-        subPath: repo/include
+    enabled: false
 
   postgresql:
     image:
@@ -56,21 +43,3 @@ airflow:
 
   migrateDatabaseJob:
     enabled: true
-
-  apiServer:
-    extraVolumeMounts:
-      - name: dags
-        mountPath: /opt/airflow/plugins
-        subPath: repo/plugins
-      - name: dags
-        mountPath: /opt/airflow/include
-        subPath: repo/include
-
-  scheduler:
-    extraVolumeMounts:
-      - name: dags
-        mountPath: /opt/airflow/plugins
-        subPath: repo/plugins
-      - name: dags
-        mountPath: /opt/airflow/include
-        subPath: repo/include
