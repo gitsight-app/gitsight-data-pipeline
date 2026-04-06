@@ -25,4 +25,4 @@ notebooks
 .venv
 
 # k8s
-./k8s/local/airflow/charts/**
+k8s/local/airflow/charts/**
