@@ -15,7 +15,13 @@ airflow:
     persistence:
       enabled: false
     gitSync:
-      enabled: false
+      enabled: true
+      repo: "https://github.com/gitsight-app/gitsight-data-pipeline.git"
+      branch: "main"
+      subPath: "dags"
+      depth: 1
+      wait: 60
+      uid: 65533
 
   logs:
     persistence:
@@ -35,6 +41,13 @@ airflow:
 
   triggerer:
     enabled: true
+    extraVolumeMounts:
+      - name: dags
+        mountPath: /opt/airflow/plugins
+        subPath: repo/plugins
+      - name: dags
+        mountPath: /opt/airflow/include
+        subPath: repo/include
 
   postgresql:
     image:
@@ -44,8 +57,20 @@ airflow:
   migrateDatabaseJob:
     enabled: true
 
-  #airflowLocalSettings: |
-  #  # Overriding default local settings to avoid airflow.www import errors in Airflow 3.x
-  #  def policy(task_instance):
-  #      pass
+  apiServer:
+    extraVolumeMounts:
+      - name: dags
+        mountPath: /opt/airflow/plugins
+        subPath: repo/plugins
+      - name: dags
+        mountPath: /opt/airflow/include
+        subPath: repo/include
 
+  scheduler:
+    extraVolumeMounts:
+      - name: dags
+        mountPath: /opt/airflow/plugins
+        subPath: repo/plugins
+      - name: dags
+        mountPath: /opt/airflow/include
+        subPath: repo/include

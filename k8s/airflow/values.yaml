@@ -19,6 +19,18 @@ airflow:
   data:
     metadataSecretName: "airflow-db-connection"
 
+  dags:
+    persistence:
+      enabled: false
+    gitSync:
+      enabled: true
+      repo: "https://github.com/gitsight-app/gitsight-data-pipeline.git"
+      branch: "main"
+      rev: "HEAD"
+      depth: 1
+      wait: 60
+      subPath: "dags"
+
   env:
     - name: AIRFLOW__CORE__LOAD_EXAMPLES
       value: "False"
@@ -35,25 +47,29 @@ airflow:
           port: 8080
           targetPort: 8080
           nodePort: 30090
-  dags:
-    persistence:
-      enabled: false
-    gitSync:
-      enabled: true
-      repo: "https://github.com/gitsight-app/gitsight-data-pipeline.git"
-      branch: "main"
-      rev: "HEAD"
-      depth: 1
-      wait: 60
-      subPath: "dags"
-  plugins:
-    gitSync:
-      enabled: true
 
-  extraVolumeMounts:
-    - name: dags-data
-      mountPath: /opt/airflow/include
-      subPath: "repo/include"
+    extraVolumeMounts:
+      - name: dags
+        mountPath: /opt/airflow/plugins
+        subPath: repo/plugins
+      - name: dags
+        mountPath: /opt/airflow/include
+        subPath: repo/include
+
+  scheduler:
+    extraVolumeMounts:
+      - name: dags
+        mountPath: /opt/airflow/plugins
+        subPath: repo/plugins
+      - name: dags
+        mountPath: /opt/airflow/include
+        subPath: repo/include
+
+  dagProcessor:
+    enabled: false
+
+  triggerer:
+    enabled: false
 
   logs:
     persistence:
