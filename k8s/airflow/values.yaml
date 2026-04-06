@@ -48,14 +48,6 @@ airflow:
           targetPort: 8080
           nodePort: 30090
 
-    extraVolumeMounts:
-      - name: dags
-        mountPath: /opt/airflow/plugins
-        subPath: repo/plugins
-      - name: dags
-        mountPath: /opt/airflow/include
-        subPath: repo/include
-
   scheduler:
     extraVolumeMounts:
       - name: dags
