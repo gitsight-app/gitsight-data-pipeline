@@ -5,20 +5,16 @@ airflow:
       tag: latest
       pullPolicy: Always
   fernetKeySecretName: "gitsight-airflow-fernet-key"
-
   migrateDatabaseJob:
     enabled: false
     useHelmHooks: false
-
   createUserJob:
     enabled: false
     useHelmHooks: false
-
   postgresql:
     enabled: false
   data:
     metadataSecretName: "airflow-db-connection"
-
   dags:
     persistence:
       enabled: false
@@ -30,15 +26,14 @@ airflow:
       depth: 1
       wait: 60
       subPath: "dags"
-
   env:
     - name: AIRFLOW__CORE__LOAD_EXAMPLES
       value: "False"
     - name: AIRFLOW__KUBERNETES__NAMESPACE
       value: "airflow"
-
+    - name: AIRFLOW_VAR_SPARK_IMAGE
+      value: "10.43.7.183:5000/gitsight/spark:latest"
   executor: LocalExecutor
-
   apiServer:
     service:
       type: NodePort
@@ -47,7 +42,6 @@ airflow:
           port: 8080
           targetPort: 8080
           nodePort: 30090
-
   scheduler:
     extraVolumeMounts:
       - name: dags
@@ -56,24 +50,18 @@ airflow:
       - name: dags
         mountPath: /opt/airflow/include
         subPath: repo/include
-
   dagProcessor:
     enabled: false
-
   triggerer:
     enabled: false
-
   logs:
     persistence:
       enabled: false
-
   statsd:
     enabled: false
-
   rbac:
     create: true
-
   serviceAccount:
     create: true
     name: "airflow-sa"
-    annotations: { }
+    annotations: {}

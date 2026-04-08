@@ -5,7 +5,8 @@ on:
     branches:
       - main
     paths:
-      - include/spark/**
+      - include/**
+
 
 permissions:
   contents: write
@@ -19,19 +20,20 @@ jobs:
       VALUES_FILE: k8s/airflow/values.yaml
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Set image tag
         run: |
-          echo "SPARK_IMAGE=${REGISTRY}/${IMAGE_REPOSITORY}:${GITHUB_SHA}" >> "$GITHUB_ENV"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "SPARK_IMAGE=${REGISTRY}/${IMAGE_REPOSITORY}:${SHORT_SHA}" >> "$GITHUB_ENV"
+          echo "SHORT_SHA=${SHORT_SHA}" >> "$GITHUB_ENV"
 
       - name: Build and push spark image via internal SSH (Kaniko job)
         uses: appleboy/ssh-action@v1.0.3
         env:
           SPARK_IMAGE: ${{ env.SPARK_IMAGE }}
-          GITHUB_SHA: ${{ github.sha }}
         with:
           host: ${{ secrets.TARGET_HOST }}
           username: ${{ secrets.TARGET_USER }}
@@ -39,55 +41,46 @@ jobs:
           proxy_host: ${{ secrets.BASTION_HOST }}
           proxy_username: ${{ secrets.BASTION_USER }}
           proxy_key: ${{ secrets.OCI_KEY }}
-          proxy_port: 22
-          envs: SPARK_IMAGE,GITHUB_SHA
+          envs: SPARK_IMAGE
           script: |
             set -euo pipefail
             cd ~/gitsight-data-pipeline
             git fetch --prune origin
             git reset --hard origin/main
-
             export KUBECONFIG="$HOME/.kube/config"
 
-            tmp_file="$(mktemp)"
-            sed -E \
-              -e "s|(--context=git://github.com//gitsight-app/gitsight-data-pipeline.git#refs/heads/)[^\" ]+|\\1main|" \
-              -e "s|(--destination=)[^\" ]+|\\1${SPARK_IMAGE}|" \
-              k8s/ci/spark-ci.yaml > "${tmp_file}"
-
+            sed -i "s|--destination=.*|--destination=${SPARK_IMAGE}|" k8s/ci/spark-ci.yaml
+            
             kubectl delete job gitsight-spark-ci-job -n zot --ignore-not-found
-            kubectl apply -f "${tmp_file}"
-            kubectl wait --for=condition=complete --timeout=900s job/gitsight-spark-ci-job -n zot || (kubectl logs -n zot -l job-name=gitsight-spark-ci-job --tail=200 && exit 1)
-            rm -f "${tmp_file}"
+            kubectl apply -f k8s/ci/spark-ci.yaml
+            kubectl wait --for=condition=complete --timeout=900s job/gitsight-spark-ci-job -n zot
 
-      - name: Install mikefarah yq
+      - name: Install yq
         run: |
-          sudo wget -qO /usr/local/bin/yq_mikefarah "https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64"
-          sudo chmod +x /usr/local/bin/yq_mikefarah
-          /usr/local/bin/yq_mikefarah --version
+          sudo wget -qO /usr/local/bin/yq "https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_amd64"
+          sudo chmod +x /usr/local/bin/yq
 
-      - name: Update AIRFLOW_VAR_SPARK_IMAGE in values
+      - name: Update Airflow values.yaml
         id: update_values
         run: |
-          /usr/local/bin/yq_mikefarah eval -i '.airflow.env //= []' "${VALUES_FILE}"
-          if /usr/local/bin/yq_mikefarah eval '.airflow.env[] | select(.name == "AIRFLOW_VAR_SPARK_IMAGE") | .name' "${VALUES_FILE}" | grep -q "AIRFLOW_VAR_SPARK_IMAGE"; then
-            /usr/local/bin/yq_mikefarah eval -i '(.airflow.env[] | select(.name == "AIRFLOW_VAR_SPARK_IMAGE") | .value) = strenv(SPARK_IMAGE)' "${VALUES_FILE}"
-          else
-            /usr/local/bin/yq_mikefarah eval -i '.airflow.env += [{"name":"AIRFLOW_VAR_SPARK_IMAGE","value":strenv(SPARK_IMAGE)}]' "${VALUES_FILE}"
-          fi
+          yq eval -i '
+            .airflow.env |= (. // []) |
+            ((.airflow.env[] | select(.name == "AIRFLOW_VAR_SPARK_IMAGE")).value) = strenv(SPARK_IMAGE) |
+            (select((.airflow.env[] | select(.name == "AIRFLOW_VAR_SPARK_IMAGE")) == null)) .airflow.env += [{"name": "AIRFLOW_VAR_SPARK_IMAGE", "value": strenv(SPARK_IMAGE)}]
+          ' "${VALUES_FILE}"
 
-          if git diff --quiet -- "${VALUES_FILE}"; then
+          if git diff --quiet "${VALUES_FILE}"; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Commit and push updated values
+      - name: Commit and Push to Main
         if: steps.update_values.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "${VALUES_FILE}"
-          git commit -m "chore: update spark image to ${GITHUB_SHA} [skip ci]"
+          git commit -m "chore: deploy spark image ${SHORT_SHA} [skip ci]"
           git pull --rebase origin main
           git push origin HEAD:main
