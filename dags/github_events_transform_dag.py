@@ -52,6 +52,8 @@ with DAG(
     catchup=False,
     template_searchpath=["/opt/airflow/include"],
 ) as dag:
+    start_task = EmptyOperator(task_id="start_task")
+
     with TaskGroup(group_id="transform_events") as transform_events_group:
         for event in target_events:
             task_id = f"transform_silver_{event['event_type']}_from_bronze"
@@ -68,4 +70,4 @@ with DAG(
     end_events_transform = EmptyOperator(
         task_id="end_events_transform",
     )
-    transform_events_group >> end_events_transform
+    start_task >> transform_events_group >> end_events_transform
