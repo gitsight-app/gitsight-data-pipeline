@@ -51,6 +51,7 @@ if __name__ == "__main__":
     spark_session = SparkSessionFactory.create_session(
         "ExtractActorMetaFromBronzeEventsJob"
     )
+
     args = parse_required_args(["data_interval_start", "data_interval_end"])
 
     extract_actor_meta_from_bronze_events_job(
