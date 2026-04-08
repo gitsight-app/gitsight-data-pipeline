@@ -5,7 +5,6 @@ from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import (
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sdk import DAG
 from airflow.timetables.interval import CronDataIntervalTimetable
-from operators.common.code_deploy import CodeDeployOperator
 from pendulum import datetime
 
 with DAG(
@@ -16,14 +15,6 @@ with DAG(
     template_searchpath=["/opt/airflow/include"],
 ) as dag:
     py_file_xcom = "{{ ti.xcom_pull(task_ids='deploy_spark_code') }}"
-
-    deploy_spark_code = CodeDeployOperator(
-        task_id="deploy_spark_code",
-        folder_path="/opt/airflow/include",
-        s3_bucket="gitsight",
-        s3_key="artifacts/builds/dev/include.zip",
-        aws_conn_id="aws_default",
-    )
 
     update_gold_repo_metrics = SparkKubernetesOperator(
         task_id="update_gold_repo_metrics",
@@ -87,8 +78,7 @@ with DAG(
     )
 
     (
-        deploy_spark_code
-        >> update_gold_repo_metrics
+        update_gold_repo_metrics
         >> staging_gold_repo_metrics
         >> merge_staging_repo_metrics_to_prod
         >> clear_staging_repo_metrics

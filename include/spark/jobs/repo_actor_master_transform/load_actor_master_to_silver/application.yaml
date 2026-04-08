@@ -39,7 +39,7 @@ spec:
   driver:
     image: "{{ var.value.SPARK_IMAGE }}"
     cores: 1
-    coreLimit: "1200m"
+    coreRequest: "100m"
     memory: "512m"
     serviceAccount: airflow-spark
     labels:
@@ -57,8 +57,9 @@ spec:
   executor:
     image: "{{ var.value.SPARK_IMAGE }}"
     cores: 1
+    coreRequest: "200m"
     instances: 1
-    memory: "512m"
+    memory: "1024m"
     serviceAccount: airflow-spark
     labels:
       version: "3.5.1"
