@@ -49,8 +49,10 @@ jobs:
             git reset --hard origin/main
             export KUBECONFIG="$HOME/.kube/config"
 
-            sed -i "s|--destination=.*|--destination=${SPARK_IMAGE}|" k8s/ci/spark-ci.yaml
+            sed -i "s|\(--destination=\)[^\" ]*|\1${SPARK_IMAGE}|" k8s/ci/spark-ci.yaml
             
+            grep "destination" k8s/ci/spark-ci.yaml
+
             kubectl delete job gitsight-spark-ci-job -n zot --ignore-not-found
             kubectl apply -f k8s/ci/spark-ci.yaml
             kubectl wait --for=condition=complete --timeout=900s job/gitsight-spark-ci-job -n zot
