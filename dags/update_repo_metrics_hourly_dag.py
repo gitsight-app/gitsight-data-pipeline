@@ -39,7 +39,7 @@ SELECT
     , star_trend
     , fork_trend
     , is_new
-FROM {{ ti.xcom_pull(task_ids='staging_gold_repo_metrics_table') }}
+FROM repo_metrics_hourly_staging
 ON CONFLICT (repo_id, ingested_at)
 DO UPDATE SET
     repo_name       = excluded.repo_name
@@ -99,7 +99,7 @@ with DAG(
     clear_staging_repo_metrics_to_prod = SQLExecuteQueryOperator(
         task_id="clear_staging_repo_metrics_to_prod",
         conn_id="postgres_default",
-        sql="DROP TABLE IF EXISTS {{ ti.xcom_pull(task_ids='load_oltp_gold_repo_metrics_hourly_to_staging') }}",  # noqa: E501
+        sql="DROP TABLE IF EXISTS repo_metrics_hourly_staging"
     )
 
     (
