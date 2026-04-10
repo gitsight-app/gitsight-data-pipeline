@@ -21,11 +21,6 @@ build:
             dest: "/opt/airflow/include"
             strip: "include/"
 
-    - image: gitsight/spark-local
-      context: .
-      docker:
-        dockerfile: docker/spark/Dockerfile
-
   local:
     push: false
 
@@ -40,10 +35,12 @@ deploy:
         setValueTemplates:
           airflow.images.airflow.repository: "{{.IMAGE_REPO_gitsight_airflow_local}}"
           airflow.images.airflow.tag: "{{.IMAGE_TAG_gitsight_airflow_local}}"
-          airflow.images.airflow.pullPolicy: Never
+          airflow.images.airflow.pullPolicy: IfNotPresent
+
           airflow.env[1].value: "airflow"
           airflow.env[2].name: AIRFLOW_VAR_SPARK_IMAGE
-          airflow.env[2].value: "{{.IMAGE_REPO_gitsight_spark_local}}:{{.IMAGE_TAG_gitsight_spark_local}}"
+          airflow.env[2].value: "gitsight/spark-local:latest"
+
           airflow.env[3].name: AIRFLOW_VAR_SPARK_JOB_PREFIX
           airflow.env[3].value: "local:///opt/bitnami/spark"
         wait: false
@@ -62,9 +59,3 @@ portForward:
     namespace: airflow
     port: 8080
     localPort: 8080
-
-profiles:
-  - name: dev
-    build:
-      local:
-        push: false

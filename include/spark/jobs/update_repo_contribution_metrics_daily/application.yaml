@@ -8,8 +8,8 @@ spec:
   type: Python
   mode: cluster
   image: "{{ var.value.SPARK_IMAGE }}"
-  imagePullPolicy: Always
-  mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/update_dim_actor_scd/merge_dim_actor_scd/job.py"
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/update_repo_contribution_metrics_daily/job.py"
   sparkVersion: 3.5.1
 
   restartPolicy:
@@ -40,7 +40,7 @@ spec:
   driver:
     image: "{{ var.value.SPARK_IMAGE }}"
     cores: 1
-    coreLimit: "1200m"
+    coreRequest: "100m"
     memory: "512m"
     serviceAccount: airflow-spark
     labels:
@@ -58,8 +58,9 @@ spec:
   executor:
     image: "{{ var.value.SPARK_IMAGE }}"
     cores: 1
+    coreRequest: "200m"
     instances: 1
-    memory: "512m"
+    memory: "1024m"
     serviceAccount: airflow-spark
     labels:
       version: "3.5.1"

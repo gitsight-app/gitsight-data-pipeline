@@ -11,6 +11,9 @@ airflow:
 
   executor: LocalExecutor
 
+  dagProcessor:
+    enabled: false
+
   dags:
     persistence:
       enabled: false

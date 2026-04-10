@@ -1,12 +1,11 @@
 name: spark-ci-cd
 
 on:
-  push:
+  pull_request:
     branches:
       - main
     paths:
       - include/**
-
 
 permissions:
   contents: write
@@ -19,21 +18,24 @@ jobs:
       IMAGE_REPOSITORY: gitsight/spark
       VALUES_FILE: k8s/airflow/values.yaml
     steps:
-      - name: Checkout
+      - name: Checkout PR Branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref }}
 
-      - name: Set image tag
+      - name: Set image tag and branch variables
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           echo "SPARK_IMAGE=${REGISTRY}/${IMAGE_REPOSITORY}:${SHORT_SHA}" >> "$GITHUB_ENV"
           echo "SHORT_SHA=${SHORT_SHA}" >> "$GITHUB_ENV"
+          echo "PR_BRANCH=${{ github.head_ref }}" >> "$GITHUB_ENV"
 
       - name: Build and push spark image via internal SSH (Kaniko job)
         uses: appleboy/ssh-action@v1.0.3
         env:
           SPARK_IMAGE: ${{ env.SPARK_IMAGE }}
+          PR_BRANCH: ${{ env.PR_BRANCH }}
         with:
           host: ${{ secrets.TARGET_HOST }}
           username: ${{ secrets.TARGET_USER }}
@@ -41,12 +43,15 @@ jobs:
           proxy_host: ${{ secrets.BASTION_HOST }}
           proxy_username: ${{ secrets.BASTION_USER }}
           proxy_key: ${{ secrets.OCI_KEY }}
-          envs: SPARK_IMAGE
+          envs: SPARK_IMAGE, PR_BRANCH
           script: |
             set -euo pipefail
             cd ~/gitsight-data-pipeline
             git fetch --prune origin
-            git reset --hard origin/main
+            
+            git checkout "$PR_BRANCH"
+            git reset --hard origin/"$PR_BRANCH"
+            
             export KUBECONFIG="$HOME/.kube/config"
 
             sed -i "s|\(--destination=\)[^\" ]*|\1${SPARK_IMAGE}|" k8s/ci/spark-ci.yaml
@@ -77,12 +82,13 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Commit and Push to Main
+      - name: Commit and Push to PR Branch
         if: steps.update_values.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "${VALUES_FILE}"
           git commit -m "chore: deploy spark image ${SHORT_SHA} [skip ci]"
-          git pull --rebase origin main
-          git push origin HEAD:main
+          
+          git pull --rebase origin ${{ github.head_ref }}
+          git push origin HEAD:${{ github.head_ref }}

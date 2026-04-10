@@ -11,6 +11,8 @@ dependencies = [
     "asyncio>=4.0.0",
     "dotenv>=0.9.9",
     "flashgeotext>=0.5.5",
+    "grpcio>=1.78.0",
+    "grpcio-status>=1.78.0",
     "numpy<2.0.0",
     "pandas>=2.3.3",
     "pyarrow>=22.0.0",

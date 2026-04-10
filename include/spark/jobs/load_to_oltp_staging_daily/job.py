@@ -1,7 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
-from include.spark.common.decorators import spark_session_manager
 from include.spark.common.session_factory import SparkSessionFactory
 from include.spark.utils.arg_parse_utils import parse_required_args
 from include.spark.utils.jdbc_utils import get_jdbc_config
@@ -9,7 +8,6 @@ from include.spark.utils.jdbc_utils import get_jdbc_config
 source_gold_repo_metrics_table_name = "nessie.gitsight.gold.repo_metrics_daily"
 
 
-@spark_session_manager
 def load_to_oltp_staging_job(
     *,
     spark: SparkSession,
@@ -17,8 +15,6 @@ def load_to_oltp_staging_job(
     staging_table_name,
     target_date,
     date_condition_col_name,
-    logger,
-    **kwargs,
 ):
 
     source_df = spark.read.table(source_table_name).where(
