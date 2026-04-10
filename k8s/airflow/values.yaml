@@ -51,7 +51,7 @@ airflow:
         mountPath: /opt/airflow/include
         subPath: repo/include
   dagProcessor:
-    enabled: false
+    enabled: true
   triggerer:
     enabled: false
   logs:
