@@ -31,7 +31,7 @@ spec:
 
     "spark.sql.catalog.nessie": "org.apache.iceberg.spark.SparkCatalog"
     "spark.sql.catalog.nessie.catalog-impl": "org.apache.iceberg.nessie.NessieCatalog"
-    {% set nessie_extra = conn.nessie_default.extra_dejson %}
+    { % set nessie_extra = conn.nessie_default.extra_dejson % }
     "spark.sql.catalog.nessie.uri": "{{ nessie_extra.get('uri', 'http://localhost:19120/api/v1') }}"
     "spark.sql.catalog.nessie.ref": "{{ nessie_extra.get('ref', 'main') }}"
     "spark.sql.catalog.nessie.warehouse": "{{ nessie_extra.get('warehouse') }}"
@@ -56,9 +56,10 @@ spec:
 
   executor:
     image: "{{ var.value.SPARK_IMAGE }}"
-    cores: 2
-    instances: 2
-    memory: "2g"
+    cores: 1
+    coreRequest: "200m"
+    instances: 1
+    memory: "1024m"
     serviceAccount: airflow-spark
     labels:
       version: "3.5.1"

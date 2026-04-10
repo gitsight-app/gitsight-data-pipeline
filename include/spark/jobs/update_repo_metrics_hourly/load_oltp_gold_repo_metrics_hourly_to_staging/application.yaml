@@ -16,9 +16,9 @@ spec:
     type: Never
 
   arguments:
-    - "--data_interval_start",
-    - "{{ data_interval_start }}",
-    - "--data_interval_end",
+    - "--data_interval_start"
+    - "{{ data_interval_start }}"
+    - "--data_interval_end"
     - "{{ data_interval_end }}"
     - "--target_table_name"
     - "{{ params.target_table_name }}"
@@ -67,8 +67,9 @@ spec:
   executor:
     image: "{{ var.value.SPARK_IMAGE }}"
     cores: 1
+    coreRequest: "200m"
     instances: 1
-    memory: "512m"
+    memory: "1042m"
     serviceAccount: airflow-spark
     labels:
       version: "3.5.1"
