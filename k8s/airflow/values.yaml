@@ -32,7 +32,7 @@ airflow:
     - name: AIRFLOW__KUBERNETES__NAMESPACE
       value: "airflow"
     - name: AIRFLOW_VAR_SPARK_IMAGE
-      value: "10.43.7.183:5000/gitsight/spark:919ca64"
+      value: "10.43.7.183:5000/gitsight/spark:9b104b9"
   executor: LocalExecutor
   apiServer:
     service:
