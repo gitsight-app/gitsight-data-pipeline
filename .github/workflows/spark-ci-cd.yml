@@ -47,15 +47,24 @@ jobs:
           script: |
             set -euo pipefail
             cd ~/gitsight-data-pipeline
-            git fetch --prune origin
+
             
+            echo "Cleaning up git refs and locks..."
+            find .git/refs/remotes/origin -name "*.lock" -delete || true
+            rm -rf .git/refs/remotes/origin/*
+            
+            git remote prune origin
+            git fetch --all --prune
+            
+            echo "Checking out to $PR_BRANCH..."
             git checkout "$PR_BRANCH"
             git reset --hard origin/"$PR_BRANCH"
-            
+            # ----------------------------------------------
             export KUBECONFIG="$HOME/.kube/config"
 
             sed -i "s|\(--destination=\)[^\" ]*|\1${SPARK_IMAGE}|" k8s/ci/spark-ci.yaml
             
+            echo "Verification of destination:"
             grep "destination" k8s/ci/spark-ci.yaml
 
             kubectl delete job gitsight-spark-ci-job -n zot --ignore-not-found
