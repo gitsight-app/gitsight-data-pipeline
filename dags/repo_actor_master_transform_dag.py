@@ -33,4 +33,4 @@ with DAG(
         namespace="spark-applications",
     )
 
-    start_task >> [load_repo_master_to_silver >> load_actor_master_to_silver]
+    start_task >> load_repo_master_to_silver >> load_actor_master_to_silver

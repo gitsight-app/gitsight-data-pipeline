@@ -63,8 +63,7 @@ with DAG(
     catchup=False,
     template_searchpath=["/opt/airflow/include"],
 ) as dag:
-    spark_job_base_path = "/opt/airflow/include/spark/jobs/update_repo_metrics_hourly"
-
+    spark_application_base_path = "spark/jobs/update_repo_metrics_hourly"
     wait_for_silver_events = ExternalTaskSensor(
         task_id="wait_for_silver_events",
         external_dag_id="github_events_transform",
@@ -74,19 +73,22 @@ with DAG(
         timeout=60 * 60,
     )
 
-    update_gold_repo_metrics_table = SparkKubernetesOperator(
-        task_id="update_gold_repo_metrics_table",
-        application_file="spark/jobs/update_repo_metrics_hourly/update_gold_repo_metrics_hourly/application.yaml",
-        namespace="spark_applications",
+    update_gold_repo_metrics = SparkKubernetesOperator(
+        task_id="update_gold_repo_metrics",
+        application_file=f"{spark_application_base_path}/update_gold_repo_metrics/application.yaml",
+        namespace="spark-applications",
+        arguments={
+            "target_table_name": "repo_metrics_hourly"
+        }
     )
 
-    staging_gold_repo_metrics_table = SparkKubernetesOperator(
-        task_id="staging_gold_repo_metrics_table",
-        application_file="spark/jobs/update_repo_metrics_hourly/load_oltp_gold_repo_metrics_hourly_to_staging/application.yaml",
+    load_oltp_gold_repo_metrics_hourly_to_staging = SparkKubernetesOperator(
+        task_id="load_oltp_gold_repo_metrics_hourly_to_staging",
+        application_file=f"{spark_application_base_path}/load_oltp_gold_repo_metrics_hourly_to_staging/application.yaml",
         params={
             "staging_table_name": "repo_metrics_hourly_staging",
         },
-        namespace="spark_applications",
+        namespace="spark-applications",
     )
 
     merge_staging_repo_metrics_to_prod = SQLExecuteQueryOperator(
@@ -99,13 +101,13 @@ with DAG(
     clear_staging_repo_metrics_to_prod = SQLExecuteQueryOperator(
         task_id="clear_staging_repo_metrics_to_prod",
         conn_id="postgres_default",
-        sql="DROP TABLE IF EXISTS {{ ti.xcom_pull(task_ids='staging_gold_repo_metrics_table') }}",  # noqa: E501
+        sql="DROP TABLE IF EXISTS {{ ti.xcom_pull(task_ids='load_oltp_gold_repo_metrics_hourly_to_staging') }}",  # noqa: E501
     )
 
     (
         wait_for_silver_events
-        >> update_gold_repo_metrics_table
-        >> staging_gold_repo_metrics_table
+        >> update_gold_repo_metrics
+        >> load_oltp_gold_repo_metrics_hourly_to_staging
         >> merge_staging_repo_metrics_to_prod
         >> clear_staging_repo_metrics_to_prod
     )
