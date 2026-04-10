@@ -17,23 +17,20 @@ with DAG(
     template_searchpath=["/opt/airflow/include"],
     catchup=False,
 ) as dag:
-    gold_repo_metrics_table_name = "nessie.gitsight.gold.repo_metrics_daily"
-    spark_job_bast_path = "/opt/airflow/include/spark/jobs/update_repo_metrics_daily"
-
     update_gold_repo_metrics_daily = SparkKubernetesOperator(
         task_id="update_gold_repo_metrics_daily",
-        application_file="spark/jobs/update_gold_repo_metrics_daily/application.yaml",
-        namespace="spark_applications",
+        application_file="spark/jobs/update_repo_metrics_daily/application.yaml",
+        namespace="spark-applications",
         params={"target_table_name": "nessie.gitsight.gold.repo_metrics_daily"},
     )
 
     load_oltp_gold_repo_metrics_hourly_to_staging = SparkKubernetesOperator(
         task_id="load_oltp_gold_repo_metrics_hourly_to_staging",
         application_file="spark/jobs/load_to_oltp_staging_daily/application.yaml",
-        namespace="spark_applications",
+        namespace="spark-applications",
         params={
             "source_table_name": "nessie.gitsight.gold.repo_metrics_daily",
-            "staging_table_name": "repo_metrics_daily_staging",
+            "target_table_name": "repo_metrics_daily_staging",
             "date_condition_col_name": "created_date",
         },
     )
@@ -59,7 +56,7 @@ with DAG(
             , issues_count
             , push_count
             , created_date
-        FROM {{ ti.xcom_pull(task_ids='load_oltp_gold_repo_metrics_hourly_to_staging') }}
+        FROM repo_metrics_daily_staging
         ON CONFLICT (repo_id, created_date)
         DO UPDATE SET
             repo_id = excluded.repo_id
@@ -75,7 +72,7 @@ with DAG(
     clear_staging_repo_metrics = SQLExecuteQueryOperator(
         task_id="clear_staging_repo_metrics",
         conn_id="postgres_default",
-        sql="""DROP TABLE IF EXISTS {{ ti.xcom_pull(task_ids='load_oltp_gold_repo_metrics_hourly_to_staging') }}
+        sql="""DROP TABLE IF EXISTS repo_metrics_daily_staging
         """,  # noqa: E501
     )
 

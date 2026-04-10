@@ -19,16 +19,17 @@ with DAG(
     catchup=False,
 ) as dag:
     start_task = EmptyOperator(task_id="start_task")
+    application_base_path = "spark/jobs/repo_actor_master_transform"
 
     load_repo_master_to_silver = SparkKubernetesOperator(
         task_id="load_repo_master_to_silver",
-        application_file="spark/jobs/repo_actor_master_transform/load_actor_master_to_silver/application.yaml",
+        application_file=f"{application_base_path}/load_repo_master_to_silver/application.yaml",
         namespace="spark-applications",
     )
 
     load_actor_master_to_silver = SparkKubernetesOperator(
         task_id="load_actor_master_to_silver",
-        application_file="spark/jobs/repo_actor_master_transform/load_actor_master_to_silver/application.yaml",
+        application_file=f"{application_base_path}/load_actor_master_to_silver/application.yaml",
         namespace="spark-applications",
     )
 

@@ -8,6 +8,7 @@ from pyspark.sql.connect.session import SparkSession
 
 from include.spark.common.session_factory import SparkSessionFactory
 from include.spark.utils.arg_parse_utils import parse_required_args
+from include.spark.utils.condition_utils import get_ingested_at_between_condition
 from include.spark.utils.logger_utils import get_logger
 
 SOURCE_EVENT_TABLE_NAMES = [
@@ -28,7 +29,7 @@ def update_gold_repo_metrics_daily_job(
 
     events_df = spark.read.table(SOURCE_EVENT_TABLE_NAMES[0])
 
-    date_between = (F.col("ingested_at") >= start_ts) & (F.col("ingested_at") < end_ts)
+    date_between = get_ingested_at_between_condition(start_ts, end_ts)
 
     for table_name in SOURCE_EVENT_TABLE_NAMES[1:]:
         events_df = _union_source_events(spark, events_df, table_name, date_between)
@@ -57,7 +58,7 @@ def update_gold_repo_metrics_daily_job(
 
     result_df = event_count_by_repo_id_per_day_df.orderBy(
         F.col("star_count").desc(), F.col("repo_id")
-    )
+    ).limit(500)
 
     if not spark.catalog.tableExists(target_table_name):
         (

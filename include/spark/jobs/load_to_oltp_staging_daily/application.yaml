@@ -43,7 +43,7 @@ spec:
     "spark.sql.catalog.nessie.warehouse": "{{ nessie_extra.get('warehouse') }}"
     # --- Oltp Configurations  ---
     {% set db = conn.postgres_default %}
-    "spark.datasource.jdbc.url": "jdbc:postgresql://{{ db.host }}:{{ db.port }}/{{ db.schema }}"
+    "spark.datasource.jdbc.url": "jdbc:postgresql://{{ db.host }}:{{ db.port }}/{{ db.schema }}?prepareThreshold=0"
     "spark.datasource.jdbc.user": "{{ db.login }}"
     "spark.datasource.jdbc.password": "{{ db.password }}"
     "spark.datasource.jdbc.port": "{{ db.port }}"
