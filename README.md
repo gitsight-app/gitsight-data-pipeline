@@ -14,6 +14,9 @@ kubectl create ns spark
 kubectl create ns spark-applications
 
 skaffold dev --port-forward --cleanup=False
+
+# Build Spark Image (When Change Spark job.py)
+ docker build -t gitsight/spark-local:latest -f docker/spark/Dockerfile .
 ```
 
 # About Gitsight

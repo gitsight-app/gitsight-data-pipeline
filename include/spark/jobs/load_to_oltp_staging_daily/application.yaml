@@ -8,7 +8,7 @@ spec:
   type: Python
   mode: cluster
   image: "{{ var.value.SPARK_IMAGE }}"
-  imagePullPolicy: Always
+  imagePullPolicy: IfNotPresent
   mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/load_to_oltp_staging_daily/job.py"
   sparkVersion: 3.5.1
 
@@ -18,12 +18,12 @@ spec:
   arguments:
     - "--target_date"
     - "{{ ds }}"
-    - "--staging_table_name"
-    - "{{ param.staging_table_name }}"
+    - "--target_table_name"
+    - "{{ params.target_table_name }}"
     - "--source_table_name"
-    - "{{ param.source_table_name }}"
+    - "{{ params.source_table_name }}"
     - "--date_condition_col_name"
-    - "{{ param.date_condition_col_name }}"
+    - "{{ params.date_condition_col_name }}"
 
 
   sparkConf:
@@ -41,11 +41,19 @@ spec:
     "spark.sql.catalog.nessie.uri": "{{ nessie_extra.get('uri', 'http://localhost:19120/api/v1') }}"
     "spark.sql.catalog.nessie.ref": "{{ nessie_extra.get('ref', 'main') }}"
     "spark.sql.catalog.nessie.warehouse": "{{ nessie_extra.get('warehouse') }}"
+    # --- Oltp Configurations  ---
+    {% set db = conn.postgres_default %}
+    "spark.datasource.jdbc.url": "jdbc:postgresql://{{ db.host }}:{{ db.port }}/{{ db.schema }}?prepareThreshold=0"
+    "spark.datasource.jdbc.user": "{{ db.login }}"
+    "spark.datasource.jdbc.password": "{{ db.password }}"
+    "spark.datasource.jdbc.port": "{{ db.port }}"
+    "spark.datasource.jdbc.driver": "org.postgresql.Driver"
 
   driver:
     image: "{{ var.value.SPARK_IMAGE }}"
+    imagePullPolicy: IfNotPresent
     cores: 1
-    coreLimit: "1200m"
+    coreRequest: "100m"
     memory: "512m"
     serviceAccount: airflow-spark
     labels:
@@ -62,7 +70,9 @@ spec:
 
   executor:
     image: "{{ var.value.SPARK_IMAGE }}"
+    imagePullPolicy: IfNotPresent
     cores: 1
+    coreRequest: "200m"
     instances: 1
     memory: "512m"
     serviceAccount: airflow-spark

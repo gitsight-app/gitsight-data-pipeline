@@ -8,7 +8,7 @@ spec:
   type: Python
   mode: cluster
   image: "{{ var.value.SPARK_IMAGE }}"
-  imagePullPolicy: Always
+  imagePullPolicy: IfNotPresent
   mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/repo_actor_master_transform/load_repo_master_to_silver/job.py"
   sparkVersion: 3.5.1
 

@@ -8,17 +8,17 @@ spec:
   type: Python
   mode: cluster
   image: "{{ var.value.SPARK_IMAGE }}"
-  imagePullPolicy: Always
-  mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/update_repo_metrics_hourly/update_gold_repo_metrics_hourly/job.py"
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/update_repo_metrics_hourly/update_gold_repo_metrics/job.py"
   sparkVersion: 3.5.1
 
   restartPolicy:
     type: Never
 
   arguments:
-    - "--data_interval_start",
-    - "{{ data_interval_start }}",
-    - "--data_interval_end",
+    - "--data_interval_start"
+    - "{{ data_interval_start }}"
+    - "--data_interval_end"
     - "{{ data_interval_end }}"
 
   sparkConf:
@@ -39,7 +39,7 @@ spec:
   driver:
     image: "{{ var.value.SPARK_IMAGE }}"
     cores: 1
-    coreLimit: "1200m"
+    coreRequest: "100m"
     memory: "512m"
     serviceAccount: airflow-spark
     labels:
@@ -57,8 +57,9 @@ spec:
   executor:
     image: "{{ var.value.SPARK_IMAGE }}"
     cores: 1
+    coreRequest: "200m"
     instances: 1
-    memory: "512m"
+    memory: "1024m"
     serviceAccount: airflow-spark
     labels:
       version: "3.5.1"

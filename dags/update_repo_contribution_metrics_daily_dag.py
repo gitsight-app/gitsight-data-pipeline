@@ -25,9 +25,10 @@ with DAG(
     staging_gold_repo_metrics = SparkKubernetesOperator(
         task_id="staging_gold_repo_metrics",
         application_file="spark/jobs/load_to_oltp_staging_daily/application.yaml",
+        namespace="spark-applications",
         params={
             "source_table_name": "nessie.gitsight.gold.repo_contribution_metrics_daily",
-            "staging_table_name": "repo_contribution_metrics_daily_staging",
+            "target_table_name": "repo_contribution_metrics_daily_staging",
             "date_condition_col_name": "created_date",
         },
     )
@@ -55,7 +56,7 @@ with DAG(
             , issues_event_count
             , push_event_count
             , created_date
-        FROM {{ ti.xcom_pull(task_ids='staging_gold_repo_metrics') }}
+        FROM repo_contribution_metrics_daily_staging
         ON CONFLICT (repo_id, created_date, country_code)
         DO UPDATE SET
             repo_id = excluded.repo_id
@@ -73,7 +74,7 @@ with DAG(
     clear_staging_repo_metrics = SQLExecuteQueryOperator(
         task_id="clear_staging_repo_metrics",
         conn_id="postgres_default",
-        sql="""DROP TABLE IF EXISTS {{ ti.xcom_pull(task_ids='staging_gold_repo_metrics') }}
+        sql="""DROP TABLE IF EXISTS repo_contribution_metrics_daily_staging
         """,  # noqa: E501
     )
 

@@ -28,7 +28,11 @@ def update_gold_repo_contribution_metrics_daily_job(
 
     actor_detail_scd_df = spark.read.table(
         source_silver_actor_detail_scd_table_name
-    ).where((F.col("ingested_at") < F.lit(end_ts)))
+    ).where(
+        (F.col("ingested_at") < F.lit(end_ts))
+        & (F.col("country_code") != "UNKNOWN")
+        & (F.col("country_code").isNotNull())
+    )
 
     events_with_actor_detail_df = join_events_actor_df(
         events_df, "events", actor_detail_scd_df, "actors"
@@ -68,7 +72,7 @@ def join_events_actor_df(events_df, events_alias, actor_df, actor_alias):
     return events_df.alias(events_alias).join(
         actor_df.alias(actor_alias).hint("shuffle_hash"),
         on=event_actor_join_condition,
-        how="left",
+        how="inner",
     )
 
 
