@@ -77,16 +77,14 @@ with DAG(
         task_id="update_gold_repo_metrics",
         application_file=f"{spark_application_base_path}/update_gold_repo_metrics/application.yaml",
         namespace="spark-applications",
-        arguments={
-            "target_table_name": "repo_metrics_hourly"
-        }
     )
 
     load_oltp_gold_repo_metrics_hourly_to_staging = SparkKubernetesOperator(
         task_id="load_oltp_gold_repo_metrics_hourly_to_staging",
         application_file=f"{spark_application_base_path}/load_oltp_gold_repo_metrics_hourly_to_staging/application.yaml",
         params={
-            "staging_table_name": "repo_metrics_hourly_staging",
+            "source_table_name": "nessie.gitsight.gold.repo_metrics_hourly",
+            "target_table_name": "repo_metrics_hourly_staging",
         },
         namespace="spark-applications",
     )

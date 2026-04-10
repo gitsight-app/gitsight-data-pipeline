@@ -20,6 +20,8 @@ spec:
     - "{{ data_interval_start }}"
     - "--data_interval_end"
     - "{{ data_interval_end }}"
+    - "--source_table_name"
+    - "{{ params.source_table_name }}"
     - "--target_table_name"
     - "{{ params.target_table_name }}"
 
