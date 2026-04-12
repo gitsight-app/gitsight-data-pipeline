@@ -27,8 +27,7 @@ with DAG(
     catchup=False,
     template_searchpath=["/opt/airflow/include"],
 ) as dag:
-    spark_job_base_path = "/opt/airflow/include/spark/jobs/gharchive_events_ingest"
-
+    spark_job_base_path = "spark/jobs/gharchive_events_ingest"
     save_gharchive_to_s3 = PythonOperator(
         task_id="save_gharchive_to_s3",
         python_callable=_save_gharchive_to_s3,
@@ -40,24 +39,31 @@ with DAG(
 
     extract_gharchive_events_to_bronze = SparkKubernetesOperator(
         task_id="extract_gharchive_events_to_bronze",
-        application_file="spark/jobs/gharchive_events_ingest/extract_gharchive_events_to_bronze/application.yaml",
+        application_file=f"{spark_job_base_path}/extract_gharchive_events_to_bronze/application.yaml",
+        namespace="spark-applications",
+    )
+
+    gx_extract_gharchive_events_to_bronze = SparkKubernetesOperator(
+        task_id="gx_extract_gharchive_events_to_bronze",
+        application_file=f"{spark_job_base_path}/extract_gharchive_events_to_bronze/gx/application.yaml",
         namespace="spark-applications",
     )
 
     extract_actor_meta_from_bronze_events = SparkKubernetesOperator(
         task_id="extract_actor_meta_from_bronze_events",
-        application_file="spark/jobs/gharchive_events_ingest/extract_actor_meta_from_bronze_events/application.yaml",
+        application_file=f"{spark_job_base_path}/extract_actor_meta_from_bronze_events/application.yaml",
         namespace="spark-applications",
     )
 
     extract_repo_meta_from_bronze_events = SparkKubernetesOperator(
         task_id="extract_repo_meta_from_bronze_events",
-        application_file="spark/jobs/gharchive_events_ingest/extract_repo_meta_from_bronze_events/application.yaml",
+        application_file=f"{spark_job_base_path}/extract_repo_meta_from_bronze_events/application.yaml",
         namespace="spark-applications",
     )
 
     (
         save_gharchive_to_s3
         >> extract_gharchive_events_to_bronze
+        >> gx_extract_gharchive_events_to_bronze
         >> [extract_actor_meta_from_bronze_events, extract_repo_meta_from_bronze_events]
     )

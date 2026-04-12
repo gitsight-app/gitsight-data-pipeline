@@ -1,6 +1,6 @@
 # Gitsight
 
-Service URL: https://announcements-luke-office-sperm.trycloudflare.com/
+Service URL: https://overview-tone-tsunami-considering.trycloudflare.com/
 
 ## Getting Started
 

@@ -1,4 +1,4 @@
-name: spark-ci-cd
+name: Gitsight Spark CI/CD
 
 on:
   pull_request:
@@ -51,10 +51,16 @@ jobs:
             
             echo "Cleaning up git refs and locks..."
             find .git/refs/remotes/origin -name "*.lock" -delete || true
-            rm -rf .git/refs/remotes/origin/*
+            rm -f .git/index.lock
+            rm -f .git/refs/remotes/origin/*.lock
+            rm -f .git/FETCH_HEAD.lock
+            rm -f .git/HEAD.lock
+            rm -f .git/config.lock
+            
+            rm -rf .git/refs/remotes/origin/
             
             git remote prune origin
-            git fetch --all --prune
+            git fetch --prune --force origin "$PR_BRANCH"
             
             echo "Checking out to $PR_BRANCH..."
             git checkout "$PR_BRANCH"
