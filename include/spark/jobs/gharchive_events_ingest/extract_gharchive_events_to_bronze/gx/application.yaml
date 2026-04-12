@@ -9,7 +9,7 @@ spec:
   mode: cluster
   image: "{{ var.value.SPARK_IMAGE }}"
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/gharchive_events_ingest/extract_gharchive_events_to_bronze/job.py"
+  mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/gharchive_events_ingest/extract_gharchive_events_to_bronze/gx/job.py"
   sparkVersion: 3.5.1
 
   restartPolicy:
@@ -32,8 +32,6 @@ spec:
     "spark.sql.catalog.nessie.warehouse": "{{ nessie_extra.get('warehouse') }}"
 
   arguments:
-    - "--source_path"
-    - "{{ ti.xcom_pull(task_ids='save_gharchive_to_s3') }}"
     - "--data_interval_start"
     - "{{ data_interval_start }}"
     - "--data_interval_end"
@@ -48,6 +46,10 @@ spec:
     labels:
       version: "3.5.1"
     env:
+      - name: AWS_ACCESS_KEY_ID
+        value: "{{ conn.aws_default.login }}"
+      - name: AWS_SECRET_ACCESS_KEY
+        value: "{{ conn.aws_default.password }}"
       - name: HADOOP_USER_NAME
         value: spark
       - name: USER
@@ -67,6 +69,10 @@ spec:
     labels:
       version: "3.5.1"
     env:
+      - name: AWS_ACCESS_KEY_ID
+        value: "{{ conn.aws_default.login }}"
+      - name: AWS_SECRET_ACCESS_KEY
+        value: "{{ conn.aws_default.password }}"
       - name: HADOOP_USER_NAME
         value: spark
       - name: USER
