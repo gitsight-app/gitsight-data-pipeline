@@ -9,7 +9,7 @@ spec:
   mode: cluster
   image: "{{ var.value.SPARK_IMAGE }}"
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/update_repo_metrics_daily/job.py"
+  mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/update_repo_contribution_metrics_daily/gx/job.py"
   sparkVersion: 3.5.1
 
   restartPolicy:
@@ -18,8 +18,6 @@ spec:
   arguments:
     - "--target_date"
     - "{{ ds }}"
-    - "--target_table_name"
-    - "{{ params.target_table_name }}"
 
   sparkConf:
     spark.driver.extraJavaOptions: "-Duser.name=spark"
@@ -78,3 +76,4 @@ spec:
         value: spark
       - name: LOGNAME
         value: spark
+

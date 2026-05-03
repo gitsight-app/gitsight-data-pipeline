@@ -1,7 +1,5 @@
 # Gitsight
 
-Service URL: https://overview-tone-tsunami-considering.trycloudflare.com/
-
 ## Getting Started
 
 > To get started with Gitsight, follow these steps:
@@ -27,11 +25,6 @@ skaffold dev --port-forward --cleanup=False
     <img src="/docs/images/software_architecture.png" alt="Software Architecture"/>
 </div>
 
-- Catalog, Airflow, Spark(Worker, Master)간의 안정적인 통신을 위해  
-  NLB(Network Load Balancer)와 Service Discovery를 활용하여 네트워크 구성을 최적화하였습니다.
-- 데이터 레이크 운영 중 발생할 수 있는 데이터 오염을 차단하고, Nessie Catalog, Iceberg Format을 활용하여,  
-  WAP(Writes, Appends, and Deletes) 작업을 안전하게 처리할 수 있도록 설계하였습니다.
-
 _**Datalake**: Medalion Architecture (Bronze, Silver, Gold) 기반으로 설계하여,  
 데이터의 재사용성과 품질을 단계적으로 향상시킬 수 있도록 구성하였습니다._
 
@@ -39,7 +32,7 @@ _**Datalake**: Medalion Architecture (Bronze, Silver, Gold) 기반으로 설계�
 
 > Github metrics dashboard using [GitArchive](https://www.gharchive.org/)
 
-Data Pipeline Detail Page: https://announcements-luke-office-sperm.trycloudflare.com/pipeline
+Data Pipeline Detail Page: https://can-poet-consistency-lodging.trycloudflare.com/pipeline
 
 ```mermaid
 graph LR
@@ -185,8 +178,12 @@ graph LR
 
 #### aws default
 
-- AWS Access Key ID
-- AWS Secret Access Key
+```json
+{
+  "aws_access_key_id": "{your_aws_access_key_id}",
+  "aws_secret_access_key": "{your_aws_secret_access_key}"
+}
+```
 
 #### catalog_default (Nessie Catalog)
 
@@ -202,33 +199,12 @@ graph LR
 }
 ```
 
-#### spark_config_default
-
-- Extra Field (JSON):
-
+#### github_api
 ```json
 {
-  "spark.driver.extraClassPath": "/opt/airflow/jars/*",
-  "spark.executor.extraClassPath": "/opt/bitnami/spark/jars/*",
-  "spark.driver.bindAddress": "0.0.0.0",
-  "spark.driver.host": "{driver_host}",
-  "spark.driver.port": "7087",
-  "spark.blockManager.port": "7088",
-  "spark.port.maxRetries": "10",
-  "spark.dynamicAllocation.enabled": "true",
-  "spark.dynamicAllocation.shuffleTracking.enabled": "true",
-  "spark.dynamicAllocation.executorIdleTimeout": "60s"
+  "host": "https://api.github.com",
+  "password": "{your_github_token}"
 }
+
 ```
-
-#### spark_default
-
-- Host: spark://spark-master
-- Port: 7077
-
-#### github_api
-
-- Host: https://api.github.com
-- password: {your_github_token}
-
 #### ETC. postgres_default, aws_default(MinIO)

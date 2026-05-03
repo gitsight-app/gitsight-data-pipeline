@@ -1,10 +1,11 @@
 import pendulum
-from great_expectations.core import ExpectationConfiguration
 from great_expectations.core.batch import RuntimeBatchRequest
 from great_expectations.data_context import AbstractDataContext
 from pyspark.sql import SparkSession
 
-from include.spark.common.gx import get_gx_context
+from include.spark.common.gx.checkpoint import GXCheckpoint
+from include.spark.common.gx.context import get_gx_context
+from include.spark.common.gx.expectation import GXExpectation
 from include.spark.common.session_factory import SparkSessionFactory
 from include.spark.utils.arg_parse_utils import parse_required_args
 from include.spark.utils.condition_utils import get_ingested_at_between_condition
@@ -25,7 +26,7 @@ def gx_extract_gharchive_events_to_bronze(
     target_df = spark.read.table(gharchive_events_table_name).where(
         get_ingested_at_between_condition(start_ts, end_ts)
     )
-    pod_name = spark_session.conf.get("spark.kubernetes.driver.pod.name", "local-run")
+    pod_name = spark.conf.get("spark.kubernetes.driver.pod.name", "local-run")
     batch_request = RuntimeBatchRequest(
         datasource_name="gitsight_datalake",
         data_connector_name="default_runtime_data_connector_name",
@@ -49,55 +50,32 @@ def validate_dataframe(
     :param context: GxContext
     :return: checkpoint
     """
-    suite = context.add_or_update_expectation_suite(suite_name)
-    suite.expectations = []
 
-    suite.add_expectation(
-        ExpectationConfiguration(
-            expectation_type="expect_column_values_to_not_be_null",
-            kwargs={
-                "column": "ingested_at",
-            },
-        )
-    )
-
-    suite.add_expectation(
-        ExpectationConfiguration(
-            expectation_type="expect_column_values_to_be_unique",
-            kwargs={"column": "id"},
-        )
-    )
-
-    suite.add_expectation(
-        ExpectationConfiguration(
-            expectation_type="expect_table_row_count_to_be_between",
-            kwargs={"min_value": 0, "max_value": None},
+    exs = (
+        GXExpectation.builder
+        .column_not_null("ingested_at")
+        .column_unique("id")
+        .table_row_count_between(
+            min_value=0,
+            max_value=None,
             meta={
                 "description": "Row Count should be greater than or equal to 0",
                 "source_table": gharchive_events_table_name,
             },
         )
+        .build()
     )
 
-    context.update_expectation_suite(suite)
+    context.add_or_update_expectation_suite(
+        expectation_suite_name=suite_name, expectations=exs
+    )
 
-    checkpoint = context.add_or_update_checkpoint(
-        name=checkpoint_name,
-        validations=[
-            {
-                "expectation_suite_name": suite_name,
-            }
-        ],
-        action_list=[
-            {
-                "name": "store_validation_result",
-                "action": {"class_name": "StoreValidationResultAction"},
-            },
-            {
-                "name": "update_data_docs",
-                "action": {"class_name": "UpdateDataDocsAction"},
-            },
-        ],
+    checkpoint = (
+        GXCheckpoint.builder.name(checkpoint_name)
+        .suites(suite_name)
+        .store_validation_result()
+        .update_data_docs()
+        .build_and_update(context)
     )
 
     checkpoint.run(
@@ -107,7 +85,9 @@ def validate_dataframe(
 
 
 if __name__ == "__main__":
-    spark_session = SparkSessionFactory.create_session("GxExtractGhArchiveEventsToBronze")
+    spark_session = SparkSessionFactory.create_session(
+        "GxExtractGhArchiveEventsToBronze"
+    )
     args = parse_required_args(["data_interval_start", "data_interval_end"])
 
     gx_extract_gharchive_events_to_bronze(
