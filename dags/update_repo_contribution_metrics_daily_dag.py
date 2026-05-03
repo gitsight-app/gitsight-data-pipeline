@@ -14,11 +14,15 @@ with DAG(
     catchup=False,
     template_searchpath=["/opt/airflow/include"],
 ) as dag:
-    py_file_xcom = "{{ ti.xcom_pull(task_ids='deploy_spark_code') }}"
-
     update_gold_repo_metrics = SparkKubernetesOperator(
         task_id="update_gold_repo_metrics",
         application_file="spark/jobs/update_repo_contribution_metrics_daily/application.yaml",
+        namespace="spark-applications",
+    )
+
+    gx_gold_repo_metrics = SparkKubernetesOperator(
+        task_id="gx_gold_repo_metrics",
+        application_file="spark/jobs/update_repo_contribution_metrics_daily/gx/application.yaml",
         namespace="spark-applications",
     )
 
@@ -80,6 +84,7 @@ with DAG(
 
     (
         update_gold_repo_metrics
+        >> gx_gold_repo_metrics
         >> staging_gold_repo_metrics
         >> merge_staging_repo_metrics_to_prod
         >> clear_staging_repo_metrics

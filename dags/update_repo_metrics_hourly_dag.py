@@ -79,6 +79,12 @@ with DAG(
         namespace="spark-applications",
     )
 
+    gx_gold_repo_metrics_hourly = SparkKubernetesOperator(
+        task_id="gx_gold_repo_metrics_hourly",
+        application_file=f"{spark_application_base_path}/gx/application.yaml",
+        namespace="spark-applications",
+    )
+
     load_oltp_gold_repo_metrics_hourly_to_staging = SparkKubernetesOperator(
         task_id="load_oltp_gold_repo_metrics_hourly_to_staging",
         application_file=f"{spark_application_base_path}/load_oltp_gold_repo_metrics_hourly_to_staging/application.yaml",
@@ -99,12 +105,13 @@ with DAG(
     clear_staging_repo_metrics_to_prod = SQLExecuteQueryOperator(
         task_id="clear_staging_repo_metrics_to_prod",
         conn_id="postgres_default",
-        sql="DROP TABLE IF EXISTS repo_metrics_hourly_staging"
+        sql="DROP TABLE IF EXISTS repo_metrics_hourly_staging",
     )
 
     (
         wait_for_silver_events
         >> update_gold_repo_metrics
+        >> gx_gold_repo_metrics_hourly
         >> load_oltp_gold_repo_metrics_hourly_to_staging
         >> merge_staging_repo_metrics_to_prod
         >> clear_staging_repo_metrics_to_prod

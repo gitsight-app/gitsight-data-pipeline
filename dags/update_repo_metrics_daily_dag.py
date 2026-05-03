@@ -24,6 +24,13 @@ with DAG(
         params={"target_table_name": "nessie.gitsight.gold.repo_metrics_daily"},
     )
 
+    gx_gold_repo_metrics_daily = SparkKubernetesOperator(
+        task_id="gx_gold_repo_metrics_daily",
+        application_file="spark/jobs/update_repo_metrics_daily/gx/application.yaml",
+        namespace="spark-applications",
+        params={"source_table_name": "nessie.gitsight.gold.repo_metrics_daily"},
+    )
+
     load_oltp_gold_repo_metrics_hourly_to_staging = SparkKubernetesOperator(
         task_id="load_oltp_gold_repo_metrics_hourly_to_staging",
         application_file="spark/jobs/load_to_oltp_staging_daily/application.yaml",
@@ -78,6 +85,7 @@ with DAG(
 
     (
         update_gold_repo_metrics_daily
+        >> gx_gold_repo_metrics_daily
         >> load_oltp_gold_repo_metrics_hourly_to_staging
         >> merge_staging_repo_metrics_to_prod
         >> clear_staging_repo_metrics
