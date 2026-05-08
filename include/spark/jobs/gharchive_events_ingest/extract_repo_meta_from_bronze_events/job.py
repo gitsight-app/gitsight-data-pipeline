@@ -30,6 +30,8 @@ def extract_repo_meta_from_bronze_events_job(
         F.col("ingested_at").alias("ingested_at"),
     )
 
+    repo_meta_df = repo_meta_df.where(F.col("repo_id").isNotNull())
+
     logger.info(
         "[INFO] detected {} records to be written into repo_meta table".format(
             repo_meta_df.count()
@@ -41,7 +43,7 @@ def extract_repo_meta_from_bronze_events_job(
             repo_meta_df.writeTo(repo_meta_table_name)
             .tableProperty("format-version", "2")
             .partitionedBy(F.hours("ingested_at"))
-            .create()
+            .CREATE()
         )
     else:
         (repo_meta_df.writeTo(repo_meta_table_name).append())

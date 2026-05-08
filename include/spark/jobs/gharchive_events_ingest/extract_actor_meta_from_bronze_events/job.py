@@ -41,7 +41,7 @@ def extract_actor_meta_from_bronze_events_job(
             repo_meta_df.writeTo(actor_meta_table_name)
             .tableProperty("format-version", "2")
             .partitionedBy(F.hours("ingested_at"))
-            .create()
+            .CREATE()
         )
     else:
         (repo_meta_df.writeTo(actor_meta_table_name).append())
