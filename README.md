@@ -7,13 +7,15 @@
 _Check the Airflow Connections Section below and set up the necessary connections in your Airflow instance_
 
 ```shell
+# Create namespace
 kubectl create ns airflow
 kubectl create ns spark
 kubectl create ns spark-applications
 
+# req: local k8s api setup
 skaffold dev --port-forward --cleanup=False
 
-# Build Spark Image (When Change Spark job.py)
+# Build Spark Image (When change and Spark job.py)
  docker build -t gitsight/spark-local:latest -f docker/spark/Dockerfile .
 ```
 
@@ -132,6 +134,22 @@ graph LR
 
 ```
 
+### Data Quality Workflow _( Based Write-Audit-Publish )_
+
+```mermaid
+
+graph LR
+    NESSIE_MAIN[(nessie Catalog Main Branch)]
+    NESSIE_FEATURE[(nessie Catalog Feature Branch)]
+    NESSIE_MAIN_PUBLISH[(nessie Catalog Main Branch)]
+    DATA_PROCESS[/Data Processing: ELT/ELT/]
+    DATA_QUALITY_CHECK[/Data Quality Check: Great Expectations/]
+    NESSIE_MAIN -- Create Branch From Main --> NESSIE_FEATURE
+    NESSIE_FEATURE -- Write--> DATA_PROCESS -- Audit --> DATA_QUALITY_CHECK
+    DATA_QUALITY_CHECK -- If Pass, Merge to Main --> NESSIE_MAIN_PUBLISH
+    DATA_QUALITY_CHECK -- If Fail, Fix Issues --> THROW_EXCEPTION[Throw Exception and Notify Data Owner]
+```
+
 ## Skills
 
 ### Data Processing
@@ -158,11 +176,14 @@ graph LR
     <img src="https://img.shields.io/badge/nessie_catalog-23D96C?style=for-the-badge&logoColor=white" alt=""/>
 </div>
 
-### CI/CD Workflow
+### DevOps
 
 <div>
     <img src="https://img.shields.io/badge/githubactions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt=""/>
-    <img src="https://img.shields.io/badge/docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt=""/>
+    <img src="https://img.shields.io/badge/kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white" alt=""/>
+    <img src="https://img.shields.io/badge/helm-0F1689?style=for-the-badge&logo=helm&logoColor=white" alt=""/>
+    <img src="https://img.shields.io/badge/argo-EF7B4D?style=for-the-badge&logo=argo&logoColor=white" alt=""/>
+
 </div>
 
 ### Visualization & Server
@@ -200,6 +221,7 @@ graph LR
 ```
 
 #### github_api
+
 ```json
 {
   "host": "https://api.github.com",
@@ -207,4 +229,5 @@ graph LR
 }
 
 ```
+
 #### ETC. postgres_default, aws_default(MinIO)
