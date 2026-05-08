@@ -9,11 +9,35 @@ spec:
   mode: cluster
   image: "{{ var.value.SPARK_IMAGE }}"
   imagePullPolicy: IfNotPresent
-  mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/gharchive_events_ingest/extract_gharchive_events_to_bronze/gx/job.py"
+  mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/gx_table_validation/job.py"
   sparkVersion: 3.5.1
 
   restartPolicy:
     type: Never
+
+  arguments:
+    - "--source_table_name"
+    - "{{ params.source_table_name }}"
+    - "--data_interval_start"
+    - "{{ data_interval_start }}"
+    - "--data_interval_end"
+    - "{{ data_interval_end }}"
+    {% if params.date_column is defined %}
+    - "--date_column"
+    - "{{ params.date_column }}"
+    {% endif %}
+    {% if params.suite_name is defined %}
+    - "--suite_name"
+    - "{{ params.suite_name }}"
+    {% endif %}
+    {% if params.checkpoint_name is defined %}
+    - "--checkpoint_name"
+    - "{{ params.checkpoint_name }}"
+    {% endif %}
+    {% if params.data_asset_name is defined %}
+    - "--data_asset_name"
+    - "{{ params.data_asset_name }}"
+    {% endif %}
 
   sparkConf:
     spark.driver.extraJavaOptions: "-Duser.name=spark"
@@ -25,7 +49,6 @@ spec:
 
     "spark.sql.catalog.nessie": "org.apache.iceberg.spark.SparkCatalog"
     "spark.sql.catalog.nessie.catalog-impl": "org.apache.iceberg.nessie.NessieCatalog"
-
     {% set nessie_extra = conn.nessie_default.extra_dejson %}
     "spark.sql.catalog.nessie.uri": "{{ nessie_extra.get('uri', 'http://localhost:19120/api/v1') }}"
     {% if params.get('use_main_ref') %}
@@ -34,12 +57,6 @@ spec:
     "spark.sql.catalog.nessie.ref": "{{ params.nessie_ref | default('feature-' ~ (dag.dag_id | replace('_', '-')) ~ '-' ~ ts_nodash) }}"
     {% endif %}
     "spark.sql.catalog.nessie.warehouse": "{{ nessie_extra.get('warehouse') }}"
-
-  arguments:
-    - "--data_interval_start"
-    - "{{ data_interval_start }}"
-    - "--data_interval_end"
-    - "{{ data_interval_end }}"
 
   driver:
     image: "{{ var.value.SPARK_IMAGE }}"
@@ -83,3 +100,5 @@ spec:
         value: spark
       - name: LOGNAME
         value: spark
+
+
