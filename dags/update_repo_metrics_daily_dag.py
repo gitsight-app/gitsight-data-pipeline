@@ -3,7 +3,8 @@ from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import (
     SparkKubernetesOperator,
 )
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from airflow.sdk import DAG
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.sdk import DAG, TriggerRule
 from airflow.timetables.interval import CronDataIntervalTimetable
 
 with DAG(
@@ -17,18 +18,40 @@ with DAG(
     template_searchpath=["/opt/airflow/include"],
     catchup=False,
 ) as dag:
+    from operators.catalog.ref import NessieRefOperator, RefActionType
+
+    create_nessie_branch = NessieRefOperator(
+        task_id="create_nessie_branch",
+        action=RefActionType.CREATE,
+    )
+
     update_gold_repo_metrics_daily = SparkKubernetesOperator(
         task_id="update_gold_repo_metrics_daily",
         application_file="spark/jobs/update_repo_metrics_daily/application.yaml",
         namespace="spark-applications",
-        params={"target_table_name": "nessie.gitsight.gold.repo_metrics_daily"},
+        params={
+            "target_table_name": "nessie.gitsight.gold.repo_metrics_daily",
+        },
     )
 
     gx_gold_repo_metrics_daily = SparkKubernetesOperator(
         task_id="gx_gold_repo_metrics_daily",
         application_file="spark/jobs/update_repo_metrics_daily/gx/application.yaml",
         namespace="spark-applications",
-        params={"source_table_name": "nessie.gitsight.gold.repo_metrics_daily"},
+        params={
+            "source_table_name": "nessie.gitsight.gold.repo_metrics_daily",
+        },
+    )
+
+    merge_nessie_branch = NessieRefOperator(
+        task_id="merge_nessie_branch",
+        action=RefActionType.MERGE,
+        trigger_rule=TriggerRule.ALL_SUCCESS,
+    )
+
+    skip_merge_nessie_branch = EmptyOperator(
+        task_id="skip_merge_nessie_branch",
+        trigger_rule=TriggerRule.ONE_FAILED,
     )
 
     load_oltp_gold_repo_metrics_hourly_to_staging = SparkKubernetesOperator(
@@ -39,6 +62,7 @@ with DAG(
             "source_table_name": "nessie.gitsight.gold.repo_metrics_daily",
             "target_table_name": "repo_metrics_daily_staging",
             "date_condition_col_name": "created_date",
+            "use_main_ref": True,
         },
     )
 
@@ -83,10 +107,23 @@ with DAG(
         """,  # noqa: E501
     )
 
-    (
-        update_gold_repo_metrics_daily
-        >> gx_gold_repo_metrics_daily
-        >> load_oltp_gold_repo_metrics_hourly_to_staging
-        >> merge_staging_repo_metrics_to_prod
-        >> clear_staging_repo_metrics
+    delete_nessie_branch = NessieRefOperator(
+        task_id="delete_nessie_branch",
+        action=RefActionType.DELETE,
+        trigger_rule=TriggerRule.ALL_DONE,
     )
+
+    (
+        create_nessie_branch
+        >> update_gold_repo_metrics_daily
+        >> gx_gold_repo_metrics_daily
+    )
+
+    gx_gold_repo_metrics_daily >> merge_nessie_branch
+    gx_gold_repo_metrics_daily >> skip_merge_nessie_branch
+
+    merge_nessie_branch >> load_oltp_gold_repo_metrics_hourly_to_staging
+    load_oltp_gold_repo_metrics_hourly_to_staging >> merge_staging_repo_metrics_to_prod
+    merge_staging_repo_metrics_to_prod >> clear_staging_repo_metrics
+
+    [clear_staging_repo_metrics, skip_merge_nessie_branch] >> delete_nessie_branch

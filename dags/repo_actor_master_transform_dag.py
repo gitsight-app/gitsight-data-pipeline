@@ -9,15 +9,6 @@ from operators.catalog.ref import NessieRefOperator, RefActionType
 from operators.gx.table_validator import GXTableValidateOperator
 from pendulum import datetime
 
-
-def _decide_merge(gx_task_ids, **context):
-    dagrun = context["ti"].get_dagrun()
-    states = [dagrun.get_task_instance(task_id).state for task_id in gx_task_ids]
-    if all(state == "success" for state in states):
-        return "merge_nessie_branch"
-    return "skip_merge_nessie_branch"
-
-
 with DAG(
     dag_id="repo_actor_master_transform",
     doc_md="""
@@ -72,10 +63,6 @@ with DAG(
 
         load_actor_master_to_silver >> gx_actor_master_to_silver
 
-    before_to_handle_nessie_branch = EmptyOperator(
-        task_id="before_to_handle_nessie_branch"
-    )
-
     merge_nessie_branch = NessieRefOperator(
         task_id="merge_nessie_branch",
         action=RefActionType.MERGE,
@@ -94,13 +81,12 @@ with DAG(
     )
 
     create_nessie_branch >> [elt_actor_master, elt_repo_master]
-    [elt_actor_master, elt_repo_master] >> before_to_handle_nessie_branch
     [
-        gx_repo_master_to_silver,
-        gx_actor_master_to_silver,
-    ] >> before_to_handle_nessie_branch
-    (
-        before_to_handle_nessie_branch
-        >> [merge_nessie_branch, skip_merge_nessie_branch]
-        >> delete_nessie_branch
-    )
+        elt_repo_master,
+        elt_actor_master,
+    ] >> merge_nessie_branch
+    [
+        elt_repo_master,
+        elt_actor_master,
+    ] >> skip_merge_nessie_branch
+    [merge_nessie_branch, skip_merge_nessie_branch] >> delete_nessie_branch
