@@ -231,3 +231,43 @@ graph LR
 ```
 
 #### ETC. postgres_default, aws_default(MinIO)
+
+
+### K8s Secret for Production
+
+#### 1. Airflow Fernet Key (ns: airflow)
+```shell
+kubectl create secret generic gitsight-airflow-fernet-key \
+  --from-literal=fernet-key=YOUR_FERNET_KEY \
+  -n airflow
+```
+
+#### 2. Airflow DB Connection (ns: airflow)
+```shell
+kubectl create secret generic airflow-db-connection \
+  --from-literal=connection=postgresql://user:password@host:5432/airflow \
+  -n airflow
+```
+
+#### 3. Postgres Credentials (ns: postgres, nessie)
+```shell
+kubectl create secret generic postgres-creds \
+  --from-literal=username=postgres \
+  --from-literal=password=YOUR_POSTGRES_PASSWORD \
+  -n postgres
+# nessie 네임스페이스에도 필요시 동일하게 생성
+kubectl create secret generic postgres-creds \
+  --from-literal=username=postgres \
+  --from-literal=password=YOUR_POSTGRES_PASSWORD \
+  -n nessie-catalog
+```
+
+#### 4. MinIO Credentials (ns: minio)
+```shell
+kubectl create secret generic minio-creds \
+  --from-literal=rootUser=YOUR_MINIO_USER \
+  --from-literal=rootPassword=YOUR_MINIO_PASSWORD \
+  --from-literal=browser-redirect-url=https://minio.example.com \
+  -n minio
+```
+
