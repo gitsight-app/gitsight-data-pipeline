@@ -92,9 +92,9 @@ def _create_actor_detail_table(df: DataFrame):
     (
         df.writeTo(target_actor_detail_scd_table_name)
         .tableProperty("format-version", "2")
-        .tableProperty("write.update.mode", "merge-on-read")
-        .tableProperty("write.delete.mode", "merge-on-read")
-        .tableProperty("write.merge.mode", "merge-on-read")
+        .tableProperty("write.update.mode", "MERGE-on-read")
+        .tableProperty("write.delete.mode", "MERGE-on-read")
+        .tableProperty("write.MERGE.mode", "MERGE-on-read")
         .tableProperty("write.metadata.delete-after-commit.enabled", "true")
         .partitionedBy(F.hours("ingested_at"), F.col("is_current"))
         .create()

@@ -8,12 +8,13 @@ spec:
   type: Python
   mode: cluster
   image: "{{ var.value.SPARK_IMAGE }}"
-  imagePullPolicy: Always
+  imagePullPolicy: IfNotPresent
   mainApplicationFile: "{{ var.value.spark_job_prefix }}/include/spark/jobs/update_dim_actor_scd/fetch_actor_detail_to_raw/job.py"
   sparkVersion: 3.5.1
 
   restartPolicy:
     type: Never
+
 
   arguments:
     - "--github_token"
@@ -34,7 +35,11 @@ spec:
     "spark.sql.catalog.nessie.catalog-impl": "org.apache.iceberg.nessie.NessieCatalog"
     {% set nessie_extra = conn.nessie_default.extra_dejson %}
     "spark.sql.catalog.nessie.uri": "{{ nessie_extra.get('uri', 'http://localhost:19120/api/v1') }}"
+    {% if params.get('use_main_ref') %}
     "spark.sql.catalog.nessie.ref": "{{ nessie_extra.get('ref', 'main') }}"
+    {% else %}
+    "spark.sql.catalog.nessie.ref": "{{ params.nessie_ref | default('feature-' ~ (dag.dag_id | replace('_', '-')) ~ '-' ~ ts_nodash) }}"
+    {% endif %}
     "spark.sql.catalog.nessie.warehouse": "{{ nessie_extra.get('warehouse') }}"
 
   driver:

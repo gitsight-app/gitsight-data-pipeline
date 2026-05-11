@@ -3,8 +3,10 @@ from airflow.providers.cncf.kubernetes.operators.spark_kubernetes import (
     SparkKubernetesOperator,
 )
 from airflow.providers.standard.operators.empty import EmptyOperator
-from airflow.sdk import DAG
+from airflow.sdk import DAG, TaskGroup, TriggerRule
 from airflow.timetables.interval import CronDataIntervalTimetable
+from operators.catalog.ref import NessieRefOperator, RefActionType
+from operators.gx.table_validator import GXTableValidateOperator
 from pendulum import datetime
 
 with DAG(
@@ -18,19 +20,73 @@ with DAG(
     template_searchpath=["/opt/airflow/include"],
     catchup=False,
 ) as dag:
-    start_task = EmptyOperator(task_id="start_task")
     application_base_path = "spark/jobs/repo_actor_master_transform"
 
-    load_repo_master_to_silver = SparkKubernetesOperator(
-        task_id="load_repo_master_to_silver",
-        application_file=f"{application_base_path}/load_repo_master_to_silver/application.yaml",
-        namespace="spark-applications",
+    create_nessie_branch = NessieRefOperator(
+        task_id="create_nessie_branch",
+        action=RefActionType.CREATE,
     )
 
-    load_actor_master_to_silver = SparkKubernetesOperator(
-        task_id="load_actor_master_to_silver",
-        application_file=f"{application_base_path}/load_actor_master_to_silver/application.yaml",
-        namespace="spark-applications",
+    with TaskGroup(
+        group_id="elt_repo_master",
+    ) as elt_repo_master:
+        load_repo_master_to_silver = SparkKubernetesOperator(
+            task_id="load_repo_master_to_silver",
+            application_file=f"{application_base_path}/load_repo_master_to_silver/application.yaml",
+            namespace="spark-applications",
+        )
+
+        gx_repo_master_to_silver = GXTableValidateOperator(
+            task_id="gx_repo_master_to_silver",
+            source_table_name="nessie.gitsight.silver.repo_master",
+            date_column="ingested_at",
+            identify_name="silver_repo_master",
+        )
+
+        load_repo_master_to_silver >> gx_repo_master_to_silver
+
+    with TaskGroup(
+        group_id="elt_actor_master",
+    ) as elt_actor_master:
+        load_actor_master_to_silver = SparkKubernetesOperator(
+            task_id="load_actor_master_to_silver",
+            application_file=f"{application_base_path}/load_actor_master_to_silver/application.yaml",
+            namespace="spark-applications",
+        )
+
+        gx_actor_master_to_silver = GXTableValidateOperator(
+            task_id="gx_actor_master_to_silver",
+            source_table_name="nessie.gitsight.silver.actor_master",
+            date_column="ingested_at",
+            identify_name="silver_actor_master",
+        )
+
+        load_actor_master_to_silver >> gx_actor_master_to_silver
+
+    merge_nessie_branch = NessieRefOperator(
+        task_id="merge_nessie_branch",
+        action=RefActionType.MERGE,
+        trigger_rule=TriggerRule.ALL_SUCCESS,
     )
 
-    start_task >> load_repo_master_to_silver >> load_actor_master_to_silver
+    skip_merge_nessie_branch = EmptyOperator(
+        task_id="skip_merge_nessie_branch",
+        trigger_rule=TriggerRule.ONE_FAILED,
+    )
+
+    delete_nessie_branch = NessieRefOperator(
+        task_id="delete_nessie_branch",
+        action=RefActionType.DELETE,
+        trigger_rule=TriggerRule.ALL_DONE,
+    )
+
+    create_nessie_branch >> [elt_actor_master, elt_repo_master]
+    [
+        elt_repo_master,
+        elt_actor_master,
+    ] >> merge_nessie_branch
+    [
+        elt_repo_master,
+        elt_actor_master,
+    ] >> skip_merge_nessie_branch
+    [merge_nessie_branch, skip_merge_nessie_branch] >> delete_nessie_branch

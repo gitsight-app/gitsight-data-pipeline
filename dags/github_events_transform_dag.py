@@ -59,12 +59,11 @@ with DAG(
         task_id="create_nessie_branch", action=RefActionType.CREATE
     )
 
-    start_task = EmptyOperator(task_id="start_task")
-
-    with TaskGroup(group_id="transform_events") as transform_events_group:
+    with TaskGroup(group_id="transform_events") as elt_transform_group:
         for event in target_events:
             task_id = f"transform_silver_{event['event_type']}_from_bronze"
-            SparkKubernetesOperator(
+            gx_task_id = f"gx_validate_silver_{event['event_type']}"
+            elt_task = SparkKubernetesOperator(
                 task_id=task_id,
                 application_file="spark/jobs/transform_silver_events_from_bronze/application.yaml",
                 namespace="spark-applications",
@@ -74,15 +73,14 @@ with DAG(
                 },
             )
 
-    with TaskGroup(group_id="gx_validate_events") as gx_validate_events_group:
-        for event in target_events:
-            task_id = f"gx_validate_silver_{event['event_type']}"
-            GXTableValidateOperator(
-                task_id=task_id,
+            gx_task = GXTableValidateOperator(
+                task_id=gx_task_id,
                 source_table_name=event["target_table"],
                 date_column="ingested_at",
                 identify_name=f"silver_{event['event_type']}",
             )
+
+            elt_task >> gx_task
 
     merge_nessie_branch = NessieRefOperator(
         task_id="merge_nessie_branch",
@@ -101,14 +99,9 @@ with DAG(
         trigger_rule=TriggerRule.ALL_DONE,
     )
 
-    (
-        create_nessie_branch
-        >> start_task
-        >> transform_events_group
-        >> gx_validate_events_group
-    )
+    create_nessie_branch >> elt_transform_group
 
-    gx_validate_events_group >> merge_nessie_branch
-    gx_validate_events_group >> skip_merge_nessie_branch
+    elt_transform_group >> merge_nessie_branch
+    elt_transform_group >> skip_merge_nessie_branch
 
     [merge_nessie_branch, skip_merge_nessie_branch] >> delete_nessie_branch

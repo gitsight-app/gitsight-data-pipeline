@@ -50,7 +50,7 @@ def update_gold_repo_contribution_metrics_daily_job(
             result_df.writeTo(target_gold_repo_contribution_metrics_daily_table_name)
             .tableProperty("format-version", "2")
             .partitionedBy(F.col("created_date"))
-            .create()
+            .CREATE()
         )
     else:
         (
