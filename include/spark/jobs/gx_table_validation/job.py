@@ -54,7 +54,7 @@ def _build_expectations(df, *, date_column: str | None):
     if date_column and date_column in available_cols:
         not_null_cols.append(date_column)
 
-    ex_builder = GXExpectation.builder.table_row_count_between(min_value=0)
+    ex_builder = GXExpectation.builder.table_row_count_between(min_value=1)
     if not_null_cols:
         ex_builder = ex_builder.column_not_null(not_null_cols)
 
